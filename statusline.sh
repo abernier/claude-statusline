@@ -70,23 +70,31 @@ if [[ -n "$usage_json" ]]; then
 fi
 
 RESET='\033[0m'
-DIM='\033[38;5;245m'
-SEP='\033[38;5;238m'
-TRACK='48;5;236'
+DIM='\033[38;2;138;138;138m'
+SEP='\033[38;2;55;55;55m'
+TRACK='48;2;55;55;55'
 
-# usage color: green < 60, yellow < 85, red >= 85
+# limit color (5h/7d/Fable): green < 50, yellow 50-80, red > 80 (truecolor RGB)
 pct_color() {
-  if   (( $1 >= 85 )); then echo '38;5;167'
-  elif (( $1 >= 60 )); then echo '38;5;178'
-  else                      echo '38;5;113'
+  if   (( $1 > 80 )); then echo '38;2;220;60;60'
+  elif (( $1 >= 50 )); then echo '38;2;220;200;60'
+  else                     echo '38;2;140;194;74'
   fi
 }
 
-# bar <pct> <width> — solid fill with 1/8-block resolution on a dark track
+# context color: green < 25, yellow 25-49, red >= 50 (tighter — context fills fast)
+ctx_color() {
+  if   (( $1 >= 50 )); then echo '38;2;220;60;60'
+  elif (( $1 >= 25 )); then echo '38;2;220;200;60'
+  else                     echo '38;2;140;194;74'
+  fi
+}
+
+# bar <pct> <width> [color_fn] — solid fill with 1/8-block resolution on a dark track
 bar() {
-  local pct=$1 w=$2 fg partials=("" "▏" "▎" "▍" "▌" "▋" "▊" "▉")
+  local pct=$1 w=$2 color_fn=${3:-pct_color} fg partials=("" "▏" "▎" "▍" "▌" "▋" "▊" "▉")
   (( pct < 0 )) && pct=0; (( pct > 100 )) && pct=100
-  fg=$(pct_color "$pct")
+  fg=$($color_fn "$pct")
   local eighths=$(( pct * w * 8 / 100 ))
   local full=$(( eighths / 8 )) part=$(( eighths % 8 ))
   local out="" i
@@ -103,7 +111,7 @@ stacked_bar() {
   local u=$1 t=$2 w=$3
   (( u < 0 )) && u=0; (( u > 100 )) && u=100
   (( t < 0 )) && t=0; (( t > 100 )) && t=100
-  local ufg=$(pct_color "$u") blue='38;5;68' bluebg='48;5;24' trackfg='38;5;236'
+  local ufg=$(pct_color "$u") bluebg='48;2;40;80;130' trackfg='38;2;55;55;55'
   local ucells=$(( (u * w + 50) / 100 )) tcells=$(( (t * w + 50) / 100 ))
   (( u > 0 && ucells == 0 )) && ucells=1
   (( t > 0 && tcells == 0 )) && tcells=1
@@ -116,12 +124,12 @@ stacked_bar() {
   printf '%b\033[0m' "$out"
 }
 
-# fmt_reset <epoch> — time until reset: now / 45m / 7h / 3d10h
+# fmt_reset <epoch> — time until reset: now / 45m / 7h9m / 3d10h
 fmt_reset() {
   local diff=$(( $1 - $(date +%s) ))
   if   (( diff <= 60 ));    then echo "now"
   elif (( diff < 3600 ));   then echo "$(( diff / 60 ))m"
-  elif (( diff < 86400 ));  then echo "$(( diff / 3600 ))h"
+  elif (( diff < 86400 ));  then echo "$(( diff / 3600 ))h$(( diff % 3600 / 60 ))m"
   else echo "$(( diff / 86400 ))d$(( diff % 86400 / 3600 ))h"
   fi
 }
@@ -136,10 +144,10 @@ if [[ -n "$dir" ]]; then
   segs+=("${loc}${RESET}")
 fi
 
-segs+=("\033[38;5;113m★ ${model}${RESET}")
+segs+=("\033[38;2;140;194;74m★ ${model}${RESET}")
 
 if (( ctx_pct >= 0 )); then
-  segs+=("${DIM}Ctx${RESET} $(bar "$ctx_pct" 10) \033[$(pct_color "$ctx_pct")m${ctx_pct}%${RESET}")
+  segs+=("${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color) \033[$(ctx_color "$ctx_pct")m${ctx_pct}%${RESET}")
 fi
 
 # elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
