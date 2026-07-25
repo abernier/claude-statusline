@@ -36,17 +36,34 @@ myproject ⎇ main │ ★ Opus 4.8 │ Ctx ▓▓░ 9% │ 5h ▓░░ 4% ↻
 - **Fable** — the Fable weekly-scoped quota, pulled from the OAuth usage endpoint
   (cached, fetched at most every 10 min so it stays out of the TUI's way)
 
-Colors: green `< 60%`, yellow `< 85%`, red `≥ 85%`.
+Colors on **5h / 7d / Fable**: green `< 50%`, yellow `50–80%`, red `> 80%`.
+**Ctx** runs tighter — green `< 25%`, yellow `25–49%`, red `≥ 50%` — because a
+full context window stops you working right away.
 
 ## Install
 
 ```sh
-git clone https://github.com/alp82/claude-statusline ~/alp/projects/claude-statusline
-ln -s ~/alp/projects/claude-statusline/statusline.sh ~/.claude/statusline.sh
+curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/docs/install.sh | bash
+```
+
+That drops `statusline.sh` into `~/.claude/` and points `settings.json` at it —
+backing up anything it replaces. Re-run it any time to upgrade. Pass
+`--no-settings` to install the script only and wire it up yourself
+(`… | bash -s -- --no-settings`), or `--help` for the rest.
+
+<details>
+<summary>Manual install</summary>
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh \
+  -o ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
 ```
 
-Then point Claude Code at it in `~/.claude/settings.json`:
+</details>
+
+The wiring the installer writes into `~/.claude/settings.json` — add it yourself
+if you installed manually:
 
 ```json
 {
