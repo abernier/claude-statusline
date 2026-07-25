@@ -1,0 +1,703 @@
+<!doctype html>
+<!--
+  claude-statusline — the landing page. Ticket #7 of wayfinder map #1.
+
+  The page is one Claude Code TUI frame: a sidebar drives a guided walkthrough,
+  each section owns a hue and shows a zoomed loop of the segment it explains, and
+  the statusline docked at the frame's foot plays the active section's loop in
+  that section's colour. Design settled in #4.
+
+  The six statuslines on this page are LIVE DOM, not the rendered media in
+  docs/assets/ — the docked line has to retint and switch loops per section, and
+  the crops have to stay in phase with it off the same ticker, neither of which a
+  video can do. The rendered loops appear only inside <noscript>, as the no-JS
+  fallback, and in the README.
+
+  Two things are mirrored from elsewhere and must not drift:
+    - geometry + palette from statusline.sh (bars, thresholds, ↻ formatting)
+    - the five animation arcs from remotion/src/stories.ts, so the page and the
+      rendered media tell the same story
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-statusline — a statusline for Claude Code</title>
+<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
+<link rel="canonical" href="https://alp82.github.io/claude-statusline/">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://alp82.github.io/claude-statusline/">
+<meta property="og:title" content="claude-statusline — a statusline for Claude Code">
+<meta property="og:description" content="One bash script. Folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits — as bars, under the prompt, while you work.">
+<meta property="og:image" content="https://alp82.github.io/claude-statusline/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@alperortac">
+
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/jetbrains-mono-latin.woff2" crossorigin>
+<style>
+/* Self-hosted so the page reads the same everywhere, and so the frame matches
+   the rendered media, which bundles the same face (remotion/src/font.ts). One
+   variable file covers 400 and 700. The latin subset deliberately excludes the
+   box-drawing and symbol glyphs (★ ⎇ ↻ │ ▀ ⏵ ⟩) — those fall through to the
+   tail of the stack per glyph, exactly as they do in the renders. */
+@font-face {
+  font-family:'JetBrains Mono';
+  src:url('assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  font-weight:100 800;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --brand: #D97757;
+  /* the script's own palette — untouched (statusline.sh, pct_color/ctx_color) */
+  --green: rgb(140,194,74);
+  --yellow: rgb(220,200,60);
+  --red: rgb(220,60,60);
+  --dim: rgb(138,138,138);
+  --sep: rgb(55,55,55);
+  --track: rgb(55,55,55);
+  --blue: rgb(40,80,130);
+  --dirc: rgb(95,175,215);
+
+  --bg: #0d0d0d;
+  --app: #161616;
+  --sunk: #101010;          /* anything that reads as a screen within the frame */
+  --fg: #ededed;
+  --muted: #8f8f8f;
+  --faint: #6e6e6e;
+  --line: #242424;
+  --hair: #1e1e1e;
+
+  /* one inline rhythm for every region inside the frame, and one content measure
+     so text, loops and install blocks share the same right edge */
+  --pad: clamp(26px, 4.2vw, 46px);
+  --measure: 780px;
+  --tint: transparent;
+  --mono: 'JetBrains Mono','DejaVu Sans Mono','Liberation Mono',ui-monospace,monospace;
+}
+@property --wash { syntax:'<percentage>'; inherits:true; initial-value:5%; }
+
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--mono);
+  font-size:14px; -webkit-font-smoothing:antialiased; }
+a { color:inherit; }
+::selection { background:var(--brand); color:#141414; }
+:focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:3px; }
+
+/* ================= the statusline ================= */
+/* tabular figures + reserved width per field: values change every frame, and the
+   line must not shuffle sideways when 9% becomes 100%.
+   line-height is the terminal cell: a bar is drawn with `▀`/`█`, which fill the
+   whole character cell, so the bar box is exactly one line box tall. 1.45 is
+   remotion/src/theme.ts's metrics.lineHeightRatio — page and renders agree. */
+.sl { display:flex; align-items:center; white-space:nowrap; line-height:1.45;
+  font-variant-numeric:tabular-nums; }
+.sl .seg { display:inline-flex; align-items:center; gap:.55em; transition:opacity .45s ease; }
+.sl .seg.off { opacity:.22; }
+.sl .pipe { color:var(--sep); padding:0 .85em; }
+.sl .dir { color:var(--dirc); }
+.sl .br, .sl .label, .sl .reset { color:var(--dim); }
+/* `★ Model` is printed green, not yellow — statusline.sh:147 */
+.sl .star { color:var(--green); }
+.sl .pct { min-width:2.6em; text-align:right; }
+.sl .reset { min-width:3.9em; }
+/* .6em per cell is the mono advance width (theme.ts cellWidthRatio) */
+.bar { display:flex; height:1.45em; width:6em; background:var(--track); flex:0 0 auto; }
+.bar .cell { width:.6em; height:100%; display:flex; flex-direction:column; }
+.bar .cell .top, .bar .cell .bot { height:50%; }
+.bar .cell .bot { position:relative; z-index:1; }   /* blue paints over the glow */
+.bar.plain { position:relative; }
+.bar.plain .fill { position:absolute; left:0; top:0; bottom:0; }
+.overshoot { box-shadow:0 0 .16em currentColor; }
+
+/* ================= the Claude Code TUI ================= */
+.tui { container-type:inline-size; font-size:13px; }
+.tui-head { display:flex; gap:18px; align-items:flex-start; padding:26px var(--pad) 16px; }
+.tui-head .who .name { color:#f2f2f2; font-weight:700; }
+.tui-head .who .ver { color:#5f5f5f; margin-left:9px; font-weight:400; }
+.tui-head .who .meta, .tui-head .who .cwd { color:#a9a9a9; line-height:1.7; }
+.tui-hint { display:flex; gap:13px; color:#8a8a8a; padding:0 var(--pad); line-height:1.6; }
+.tui-hint .rule { width:2px; background:#3a3a3a; flex:0 0 2px; border-radius:2px; }
+.tui-prompt { border-top:1px solid #2b2b2b; padding:18px var(--pad); display:flex; gap:13px;
+  color:#6a6a6a; }
+.tui-prompt .chev { color:#8a8a8a; }
+.tui-prompt .cur::after { content:'▊'; color:#8a8a8a; animation:blink 1.05s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0 } }
+.tui-sl { padding:52px var(--pad) 48px; }
+.tui-mode { color:var(--brand); padding:0 var(--pad) 28px; font-size:12.5px; }
+.tui-mode span { color:var(--faint); }
+/* the caption is a typed comment — it needs air above it, not just below */
+.tui-cap { color:var(--faint); font-size:.86em; padding:20px var(--pad) 0; min-height:1.5em; }
+.tui-cap::after { content:'▊'; color:#454545; animation:blink 1.05s steps(1) infinite; }
+
+/* the zoomed loop under each section. It scrolls inside its own box rather than
+   bursting the layout: below ~640px the line is wider than any phone, and the
+   font-size clamp bottoms out at 9px long before it would fit. */
+.crop { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+  padding:30px 26px; margin-top:22px; container-type:inline-size; max-width:var(--measure);
+  overflow-x:auto; scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+/* the whole-line loop is 109 cells wide — held to --measure it would render
+   smaller than the docked line it is supposed to be a zoom of */
+.crop.wide { max-width:none; }
+/* the rendered loop, shown only when there is no JS to drive the live one */
+noscript img { display:block; width:100%; height:auto; }
+
+/* ================= controls ================= */
+.btnrow { display:flex; gap:9px; align-items:stretch; flex-wrap:wrap; --h:40px; }
+.btn { height:var(--h); font-family:var(--mono); font-size:13px; cursor:pointer;
+  background:transparent; border:1px solid #333; color:var(--muted); padding:0 15px;
+  border-radius:7px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+  white-space:nowrap; transition:border-color .18s ease, color .18s ease, background-color .18s ease; }
+.btn:hover { border-color:var(--brand); color:var(--brand); }
+.btn svg { width:14px; height:14px; fill:currentColor; flex:0 0 auto; }
+.btn.solid { background:var(--brand); border-color:var(--brand); color:#180f0b; font-weight:600; }
+.btn.solid:hover { filter:brightness(1.09); color:#180f0b; }
+.btn.icon { width:var(--h); padding:0; justify-content:center; }
+.oneliner { height:var(--h); display:flex; align-items:center; border:1px solid var(--line);
+  border-radius:7px; padding:0 15px; font-size:12.5px; color:#c4c4c4; background:var(--sunk);
+  overflow-x:auto; white-space:nowrap; max-width:100%; scrollbar-width:none; }
+.oneliner::-webkit-scrollbar { display:none; }
+
+/* ================= sidebar ================= */
+.side { position:sticky; top:0; height:100vh; border-right:1px solid var(--hair);
+  padding:34px 20px; display:flex; flex-direction:column; z-index:7; background:var(--bg); }
+.side .brand { font-size:15px; margin-bottom:4px; letter-spacing:-.01em; }
+.side .brand b { color:var(--brand); font-weight:600; }
+.side .ver { color:#565656; font-size:11px; margin-bottom:30px; }
+.side .grp { color:#4f4f4f; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  margin:0 0 10px 14px; }
+.side nav { margin-bottom:24px; }
+.side nav a { display:flex; gap:11px; text-decoration:none; color:#8a8a8a; font-size:12.5px;
+  padding:7px 14px; border-left:2px solid transparent; line-height:1.5; border-radius:0 5px 5px 0;
+  transition:color .2s ease, background-color .35s ease, border-color .35s ease; }
+.side nav a i { font-style:normal; color:#4a4a4a; font-size:11px; padding-top:1px;
+  transition:color .35s ease; }
+.side nav a:hover { color:var(--fg); }
+.side nav a.on { color:var(--fg); border-left-color:var(--stepc, var(--brand));
+  background:color-mix(in srgb, var(--stepc, var(--brand)) 13%, transparent); }
+.side nav a.on i { color:var(--stepc, var(--brand)); }
+
+/* author card — pinned to the foot of the sidebar, so it sits under the fold of
+   the nav on every section without ever competing with the walkthrough */
+.side .author { margin-top:auto; padding-top:18px; border-top:1px solid var(--hair); }
+.side .author a { display:flex; align-items:center; gap:10px; text-decoration:none;
+  padding:9px 11px; border-radius:8px; background:var(--sunk); border:1px solid var(--hair);
+  color:#c4c4c4;
+  transition:border-color .25s ease, background-color .25s ease, color .25s ease; }
+/* one hover driver: `color` carries both the handle and the currentColor icon */
+.side .author a:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
+  background:color-mix(in srgb, var(--brand) 10%, var(--sunk)); color:var(--brand); }
+.side .author svg { width:13px; height:13px; flex:none; fill:currentColor; }
+.side .author .who { display:flex; flex-direction:column; line-height:1.3; min-width:0; }
+.side .author .lbl { font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:#4f4f4f; }
+.side .author .at { font-size:12.5px; }
+.shell { display:grid; grid-template-columns:236px minmax(0,1fr); }
+
+/* ================= app frame ================= */
+.main { height:100vh; display:flex; flex-direction:column; }
+/* min-width:0 all the way down, or the docked line's own min-content width holds
+   the column open, the `.tui` container never gets narrow, and the container
+   query that wraps the line never fires — the page just grows sideways instead */
+.app { flex:1; min-height:0; min-width:0; display:flex; flex-direction:column; margin:20px 22px 0;
+  border:1px solid #2a2a2a; border-radius:11px 11px 0 0; overflow:hidden; background:var(--app); }
+.scrollarea { flex:1; min-height:0; overflow-y:auto; padding-bottom:26px;
+  scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; scroll-behavior:smooth; }
+.scrollarea::-webkit-scrollbar { width:12px; }
+.scrollarea::-webkit-scrollbar-track { background:transparent; }
+.scrollarea::-webkit-scrollbar-thumb { background:#2c2c2c; border-radius:99px;
+  border:3.5px solid var(--app); background-clip:padding-box; }
+.scrollarea::-webkit-scrollbar-thumb:hover { background:#3d3d3d; background-clip:padding-box; }
+
+/* the docked line carries the active section's tint, so line and section read as
+   one continuous band */
+.appfoot { border-top:1px solid var(--line); background:var(--app);
+  box-shadow:inset 3px 0 0 var(--tint);
+  transition:background-color .6s ease, box-shadow .6s ease; }
+.appfoot.tinted { background:color-mix(in srgb, var(--tint) 10%, var(--app)); }
+
+/* ================= page regions — all on the same inline rule ================= */
+.hero, .step, .tail { padding-inline:var(--pad); }
+.hero { padding-block:34px 30px; }
+.hero h1 { font-size:clamp(26px,2.9vw,38px); font-weight:600; letter-spacing:-.028em;
+  line-height:1.2; margin:0 0 12px; max-width:22ch; }
+.hero .sub { color:var(--muted); font-size:14.5px; line-height:1.75; max-width:62ch;
+  margin:0 0 24px; }
+
+/* Baseline is the readable one: dimming the inactive sections only makes sense
+   once there is JS to undim the active one, so it hangs off the `js` class. */
+.step { min-height:44vh; display:flex; flex-direction:column; justify-content:center;
+  padding-block:7vh; opacity:1; --wash:9%;
+  /* a full-width band of the section's colour, fading out top and bottom so the
+     sections melt into one another instead of stacking as cards */
+  background:linear-gradient(180deg, transparent,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 22%,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 78%, transparent);
+  transition:opacity .4s ease, --wash .6s ease; }
+.js .step { opacity:.5; --wash:5%; }
+.js .step.on { opacity:1; --wash:15%; }
+.step .n { color:var(--stepc, var(--brand)); font-size:11px; letter-spacing:.22em;
+  margin-bottom:10px; }
+.step h2 { font-size:20px; font-weight:600; margin:0 0 10px; line-height:1.3;
+  letter-spacing:-.015em; }
+.step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0; max-width:60ch; }
+
+/* ================= install ================= */
+.tail { border-top:1px solid var(--hair); padding-block:54px 34px; }
+.tail h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#6b6b6b;
+  margin:0 0 6px; font-weight:600; }
+.tail .intro { color:var(--muted); font-size:14px; line-height:1.75; margin:0 0 26px;
+  max-width:60ch; }
+.install { display:flex; flex-direction:column; gap:18px; max-width:var(--measure); }
+.ib { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+  overflow:hidden; }
+.ib-head { display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:13px 18px; border-bottom:1px solid var(--hair); background:#131313; }
+.ib-lbl { color:#9d9d9d; font-size:12.5px; display:flex; align-items:center; gap:11px; }
+.ib-lbl b { color:var(--brand); font-weight:600; font-size:11px; }
+.ib-head .btn { height:30px; padding:0 11px; font-size:12px; border-radius:6px; }
+.ib pre { margin:0; padding:16px 18px; font-family:var(--mono); font-size:12.5px;
+  line-height:1.85; color:#d2d2d2; overflow-x:auto; background:transparent;
+  scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+.ib pre .c { color:#5d5d5d; }        /* comment */
+.ib pre .k { color:var(--dirc); }    /* json key */
+.ib pre .s { color:var(--green); }   /* string */
+.ib .note { padding:0 18px 16px; color:var(--faint); font-size:12px; line-height:1.7; }
+.ib .note code { color:#a9a9a9; }
+.req { margin:24px 0 0; color:var(--faint); font-size:12.5px; line-height:1.8; max-width:70ch; }
+.req b { color:#a9a9a9; font-weight:500; }
+.foot { display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+  color:#565656; font-size:12px; padding:34px 0 8px; }
+.foot a { text-decoration:none; border-bottom:1px solid #333; padding-bottom:1px; }
+.foot a:hover { color:var(--brand); border-bottom-color:var(--brand); }
+
+/* ================= responsive =================
+   The line is kept whole on narrow screens by wrapping it one segment per row and
+   dropping the pipes. Keyed on the CONTAINER, so it reflows the moment its own
+   space runs out — which also makes it testable on a wide screen. */
+@container (max-width:640px) {
+  .tui-sl .sl { flex-wrap:wrap; white-space:normal; row-gap:12px; font-size:14px !important; }
+  .tui-sl .sl .pipe { display:none; }
+  .tui-sl .sl .seg { flex:0 0 100%; }
+}
+@media (max-width:960px) {
+  .shell { grid-template-columns:minmax(0,1fr); }
+  .side { position:static; height:auto; border-right:0; border-bottom:1px solid var(--hair); }
+  .side nav { margin-bottom:16px; }
+  .main { height:auto; }
+  .app { margin:12px; border-radius:11px; }
+  .step, .js .step { min-height:0; padding-block:52px; opacity:1; --wash:9%; }
+  .tui-sl { padding-block:36px 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html, .scrollarea { scroll-behavior:auto; }
+  *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; }
+}
+</style>
+<!-- everything that only makes sense once the ticker and the scroll observer are
+     running hangs off this class, so the page degrades to a readable still -->
+<script>document.documentElement.className = 'js';</script>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand"><b>claude</b>-statusline</div>
+    <div class="ver">one bash file · MIT</div>
+    <nav><a href="#start">Start</a></nav>
+    <div class="grp">Walkthrough</div>
+    <nav class="stepnav">
+      <a href="#s0" data-step="0"><i>01</i>Usage against time</a>
+      <a href="#s1" data-step="1"><i>02</i>Context window</a>
+      <a href="#s2" data-step="2"><i>03</i>When a window resets</a>
+      <a href="#s3" data-step="3"><i>04</i>The Fable window</a>
+      <a href="#s4" data-step="4"><i>05</i>What is on the line</a>
+    </nav>
+    <div class="grp">Reference</div>
+    <nav>
+      <a href="#install">Install</a>
+      <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
+    </nav>
+    <div class="author">
+      <a href="https://x.com/alperortac" target="_blank" rel="noopener me" title="Alper Ortac on X">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <span class="who"><span class="lbl">Built by</span><span class="at">@alperortac</span></span>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main"><div class="app">
+    <div class="scrollarea" id="scrollarea">
+      <div class="inner">
+
+        <!-- the TUI's own header, as Claude Code prints it on startup -->
+        <div class="tui-head">
+          <div>
+            <svg height="34" width="34" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#D97757" fill-rule="nonzero" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg>
+          </div>
+          <div class="who">
+            <div><span class="name">Claude Code</span><span class="ver">v2.1.294</span></div>
+            <div class="meta">Opus 5 with high effort · Claude Max</div>
+            <div class="cwd">~/dev/projects/claude-statusline</div>
+          </div>
+        </div>
+        <div class="tui-hint"><span class="rule"></span><span>Using Opus 5 (from .claude/settings.json) · /model</span></div>
+
+        <header class="hero" id="start">
+          <h1>A statusline for Claude Code.</h1>
+          <p class="sub">One bash script. It shows your folder and branch, the model, how full the
+            context window is, and how much of your 5-hour, 7-day and Fable limits you have used —
+            as bars, under the prompt, while you work.</p>
+          <div class="btnrow">
+            <button class="btn solid" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+            <span class="oneliner">$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</span>
+            <a class="btn icon" href="https://github.com/alp82/claude-statusline" title="View on GitHub" aria-label="View on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg></a>
+          </div>
+        </header>
+
+        <section class="step" id="s0" data-i="0" data-hue="#cf8a4e"
+                 data-cap="# used more than time passed" style="--stepc:#cf8a4e">
+          <div class="n">01</div>
+          <h2>Usage against time</h2>
+          <p>The top half of each cell is how much of the window you have used. The bottom half is
+            how much of the window has gone by. If the top reaches further right than the bottom,
+            you are using it faster than the clock, and you will run out before it resets.</p>
+          <div class="crop">
+            <div class="slh" data-crop="0" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-burn.gif" width="1000" height="200"
+              alt="The 5h bar: usage climbing past the blue elapsed-time half, the overshoot glowing."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s1" data-i="1" data-hue="#c0564e"
+                 data-cap="# context filling up" style="--stepc:#c0564e">
+          <div class="n">02</div>
+          <h2>Context window</h2>
+          <p>Turns yellow at 25% and red at 50% — sooner than the limit bars, because a full context
+            window stops you working right away. The bar fills in eighths of a character, so it
+            moves before the number does.</p>
+          <div class="crop">
+            <div class="slh" data-crop="1" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-context.gif" width="1000" height="200"
+              alt="The Ctx bar filling to 78%, turning yellow then red, then compacting back down."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s2" data-i="2" data-hue="#6ea85c"
+                 data-cap="# window reset" style="--stepc:#6ea85c">
+          <div class="n">03</div>
+          <h2>When a window resets</h2>
+          <p>At the end of a 5-hour window both halves drop back to zero, the colour goes back to
+            green, and the countdown starts again at 5h0m.</p>
+          <div class="crop">
+            <div class="slh" data-crop="2" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-reset.gif" width="1000" height="200"
+              alt="The 5h bar creeping up, dropping to zero the instant the window resets, then climbing back."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s3" data-i="3" data-hue="#8f79c0"
+                 data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
+          <div class="n">04</div>
+          <h2>The Fable window</h2>
+          <p>Claude Code does not send this one. The script reads it from ~/.claude.json and only
+            asks the API for a fresh value in the background, at most every ten minutes.</p>
+          <div class="crop">
+            <div class="slh" data-crop="3" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-fable.gif" width="1000" height="200"
+              alt="The Fable bar climbing toward 100% while the blue week-elapsed half trails behind it."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s4" data-i="4" data-hue="#5891bd"
+                 data-cap="# context, 5h, 7d, Fable" style="--stepc:#5891bd">
+          <div class="n">05</div>
+          <h2>What is on the line</h2>
+          <p>The context window, then the 5-hour, 7-day and Fable windows — each one a label, a bar
+            and a number. Your folder, branch and model sit further left, at the start of the line.</p>
+          <div class="crop wide">
+            <div class="slh" data-crop="4" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
+              alt="The whole statusline from Ctx rightward, every window moving at once."></noscript>
+          </div>
+        </section>
+
+        <section class="tail" id="install">
+          <h2>Install</h2>
+          <p class="intro">One command. It installs the script and wires Claude Code up to it.</p>
+          <div class="install">
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>01</b>Install it</span>
+                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
+              <div class="note">Drops <code>statusline.sh</code> into <code>~/.claude/</code>, makes
+                it executable and points <code>settings.json</code> at it — backing up anything it
+                replaces. Re-run it to upgrade. <code>--no-settings</code> installs the script only;
+                <code>--help</code> has the rest.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>02</b>Or install it by hand</span>
+                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh \
+    -o ~/.claude/statusline.sh
+$ chmod +x ~/.claude/statusline.sh</pre>
+              <div class="note">One file, nothing else. Then add the settings below yourself.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>03</b>Point Claude Code at it</span>
+                <button class="btn" data-copy='{ "statusLine": { "type": "command", "command": "~/.claude/statusline.sh" } }'><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre><span class="c">// ~/.claude/settings.json</span>
+{ <span class="k">"statusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
+    <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> } }</pre>
+              <div class="note">The one-liner writes this for you. You need it only after a manual
+                install, or after <code>--no-settings</code>.</div>
+            </div>
+
+          </div>
+          <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. Claude Code sends the script
+            JSON on stdin; the Fable number is the only thing the script fetches itself, in the
+            background and throttled to once every ten minutes.</p>
+          <div class="foot">
+            <span>MIT</span>
+            <a href="https://github.com/alp82/claude-statusline">alp82/claude-statusline</a>
+            <a href="https://x.com/alperortac" rel="noopener me">@alperortac</a>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- the docked statusline: exactly where Claude Code renders the real one -->
+    <div class="appfoot" id="pin">
+      <div class="tui">
+        <div class="tui-cap" id="cap"></div>
+        <div class="tui-prompt"><span class="chev">⟩</span><span class="cur"></span></div>
+        <div class="tui-sl">
+          <div class="slh" id="dock" aria-hidden="true"></div>
+          <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
+            alt="The statusline: context, 5h, 7d and Fable windows, all moving."></noscript>
+        </div>
+        <div class="tui-mode">⏵⏵ bypass permissions on <span>(shift+tab to cycle) · ← for agents</span></div>
+      </div>
+    </div>
+
+  </div></main>
+</div>
+
+<script>
+/* ================= geometry, mirroring statusline.sh =================
+   The page draws the line rather than screenshotting it, so every rule the
+   script prints by has to be restated here. Line numbers refer to statusline.sh. */
+const CELLS = 10;                       // bar width in cells (:150, :162, …)
+const CELL_EM = 0.6;                    // mono advance width (theme.ts cellWidthRatio)
+const FIVE_WINDOW = 5 * 3600;
+const WEEK_WINDOW = 7 * 86400;
+
+/* pct_color() :78 — 5h / 7d / Fable */
+const pctColor = p => p > 80 ? 'var(--red)' : p >= 50 ? 'var(--yellow)' : 'var(--green)';
+/* ctx_color() :86 — tighter, because a full context window stops you at once */
+const ctxColor = p => p >= 50 ? 'var(--red)' : p >= 25 ? 'var(--yellow)' : 'var(--green)';
+
+/* fmt_reset() :128 — now / 45m / 7h9m / 3d10h */
+const fmtReset = secs => {
+  const s = Math.max(0, Math.round(secs));
+  if (s <= 60) return '↻now';
+  if (s < 3600) return `↻${(s / 60) | 0}m`;
+  if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
+  return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
+};
+/* the inverse of elapsed_pct() :154 — the countdown is a reading of how far into
+   the window we are, so it is derived, never animated on its own */
+const remaining = (elapsedPct, windowSeconds) =>
+  Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
+
+/* bar() :94 — solid fill at 1/8-cell resolution on a dark track */
+function plainBar(pct, color) {
+  const eighths = Math.floor((Math.max(0, Math.min(100, pct)) * CELLS * 8) / 100);
+  return `<span class="bar plain"><span class="fill" style="width:${(eighths / 8) * CELL_EM}em;background:${color}"></span></span>`;
+}
+/* stacked_bar() :110 — usage on the top half of each cell, window-time-elapsed
+   (blue) on the bottom half, both snapped to whole cells, as `▀` forces */
+function stackedBar(usage, elapsed, color, glow) {
+  const u = Math.max(0, Math.min(100, usage)), t = Math.max(0, Math.min(100, elapsed));
+  let uc = Math.round(u * CELLS / 100), tc = Math.round(t * CELLS / 100);
+  if (u > 0 && uc === 0) uc = 1;
+  if (t > 0 && tc === 0) tc = 1;
+  let cells = '';
+  for (let i = 0; i < CELLS; i++) {
+    const filled = i < uc, over = filled && i >= tc;
+    cells += `<span class="cell">
+      <span class="top ${glow && over ? 'overshoot' : ''}" style="background:${filled ? color : 'var(--track)'};color:${color}"></span>
+      <span class="bot" style="background:${i < tc ? 'var(--blue)' : 'var(--track)'}"></span>
+    </span>`;
+  }
+  return `<span class="bar">${cells}</span>`;
+}
+
+/* The idle line, for whatever a story leaves alone. */
+const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7, fableT:48,
+                  glow:false, only:null, focus:null, compact:false};
+
+/* `compact` drops dir/branch/model — the line from Ctx rightward;
+   `only` crops to a single segment. */
+function statusline(o = {}) {
+  const s = {...DEFAULTS, ...o};
+  /* the script is handed percentages already rounded (jq `| round`), and uses
+     the same integer for the bar and the number — so they can never disagree */
+  const R = Math.round;
+  const ctx = R(s.ctx), five = R(s.five), week = R(s.week), fable = R(s.fable);
+  const skip = id => (s.only && s.only !== id) || (s.compact && (id === 'dir' || id === 'model'));
+  const seg = (id, inner) => skip(id) ? null
+    : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
+  const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
+  const reset = t => `<span class="reset">${t}</span>`;
+  const parts = [
+    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ master</span>`),
+    seg('model', `<span class="star">★</span><span>Opus 5</span>`),
+    seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}`),
+    seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
+    seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.fableT, pctColor(fable))}${pct(fable, pctColor(fable))}${reset(fmtReset(remaining(s.fableT, WEEK_WINDOW)))}`),
+  ].filter(Boolean);
+  /* the line is sized off its container, so one crop can hold one huge segment
+     and the docked line can hold four small ones. A crop can override both to
+     stay a zoom of the docked line rather than a shrunk copy of it. */
+  const k = s.k ?? (s.only ? 5.4 : s.compact ? 1.0 : 1.15);
+  const cap = s.cap ?? (s.only ? 44 : s.compact ? 15 : 21);
+  return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
+}
+
+/* ================= the five loops =================
+   Ported from remotion/src/stories.ts — the rendered media in docs/assets/ is
+   these same arcs, so the two files have to be changed together. Every story
+   starts and ends at the same state, which is what makes the loop seamless. */
+const easeIn = p => p * p;
+const easeOut = p => 1 - (1 - p) * (1 - p);
+const linear = p => p;
+/* ramp 0→peak by `drain`, then fall back to 0 by p=1 */
+const cyc = (p, peak, drain = 0.9, ease = linear) =>
+  p < drain ? peak * ease(p / drain) : peak * (1 - (p - drain) / (1 - drain));
+/* the 7-day window is scenery in the one loop it appears in: just past halfway */
+const WEEK_ELAPSED = 51;
+
+const STORIES = [
+  /* 01 — the clock opens quickly and flattens; usage starts gently and
+     accelerates, so the crossing itself is the event */
+  p => ({five: cyc(p, 100, 0.9, q => q ** 1.5), fiveT: cyc(p, 62, 0.9, easeOut), glow: true}),
+  /* 02 — the context window fills, then compacts */
+  p => ({ctx: cyc(p, 78, 0.92, easeOut)}),
+  /* 03 — creep, then an instant drop to zero, held a beat, then the climb back */
+  p => {
+    let pct, elapsed;
+    if (p < 0.8) { const q = p / 0.8; pct = 84 + 8 * q; elapsed = 94 + 6 * q; }
+    else {
+      const q = (p - 0.8) / 0.2;
+      if (q < 0.14) { pct = 0; elapsed = 0; }
+      else { const r = (q - 0.14) / 0.86; pct = 84 * r; elapsed = 94 * r; }
+    }
+    return {five: pct, fiveT: elapsed};
+  },
+  /* 04 — Fable burns faster than the week goes by */
+  p => ({fable: cyc(p, 100, 0.93), fableT: cyc(p, 74, 0.93)}),
+  /* 05 — the whole line, every window alive at once */
+  p => ({ctx: cyc(p, 58, 0.95),
+         five: cyc(p, 64, 0.95, easeIn), fiveT: cyc(p, 72, 0.95),
+         week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED,
+         fable: 7 + cyc(p, 26, 0.95), fableT: cyc(p, 20, 0.95)}),
+];
+
+/* what each crop frames, and which segment the docked line keeps lit */
+const CROPS = [{only:'five'}, {only:'ctx'}, {only:'five'}, {only:'fable'},
+               {compact:true, k:1.35, cap:18}];
+const FOCUS = ['five', 'ctx', 'five', 'fable', null];
+
+/* ================= behaviour ================= */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* the frame the stills are taken on (stories.ts STILL_PROGRESS): every bar is
+   well into its ramp, so nothing reads as empty or maxed out */
+const STILL = 0.62;
+const PERIOD = 8000;   // 8s a loop, as the renders are cut (compositions.ts)
+
+const scroller = document.getElementById('scrollarea');
+const pin = document.getElementById('pin');
+const dock = document.getElementById('dock');
+const cap = document.getElementById('cap');
+const steps = [...document.querySelectorAll('.step')];
+const navLinks = [...document.querySelectorAll('[data-step]')];
+const crops = [...document.querySelectorAll('[data-crop]')];
+
+document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
+  navigator.clipboard?.writeText(b.dataset.copy);
+  const was = b.innerHTML;
+  b.textContent = 'copied';
+  setTimeout(() => (b.innerHTML = was), 1200);
+}));
+
+/* scroll picks the active section: the sidebar highlight, the deepened band, and
+   which loop the docked line plays */
+let active = 0;
+const io = new IntersectionObserver(entries => entries.forEach(e => {
+  if (!e.isIntersecting) return;
+  active = +e.target.dataset.i;
+  steps.forEach(s => s.classList.toggle('on', s === e.target));
+  navLinks.forEach(a => a.classList.toggle('on', +a.dataset.step === active));
+  const on = document.querySelector('.side nav a.on');
+  if (on) on.style.setProperty('--stepc', e.target.dataset.hue);
+}), {root: scroller, rootMargin: '-42% 0px -42% 0px'});
+steps.forEach(s => io.observe(s));
+
+/* the sidebar scrolls the app frame, not the window */
+document.querySelectorAll('.side nav a[href^="#"]').forEach(a => a.addEventListener('click', ev => {
+  const target = document.querySelector(a.getAttribute('href'));
+  if (!target) return;
+  ev.preventDefault();
+  target.scrollIntoView({behavior: REDUCED ? 'auto' : 'smooth', block: 'center'});
+}));
+
+const paint = p => {
+  crops.forEach((holder, i) => {
+    holder.innerHTML = statusline({...CROPS[i], ...STORIES[i](p)});
+  });
+  dock.innerHTML = statusline({compact: true, focus: FOCUS[active], ...STORIES[active](p)});
+  cap.textContent = steps[active].dataset.cap;
+  pin.style.setProperty('--tint', steps[active].dataset.hue);
+  pin.classList.add('tinted');
+};
+
+if (REDUCED) {
+  paint(STILL);              // one representative frame, no motion
+} else {
+  let acc = 0, prev = performance.now();
+  const tick = now => {
+    requestAnimationFrame(tick);
+    acc += now - prev;
+    prev = now;
+    if (acc < 66) return;    // ~15fps — a time-lapse cadence, not a smooth one
+    acc = 0;
+    paint((now % PERIOD) / PERIOD);
+  };
+  paint(STILL);              // paint once so the line is there on first frame
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>
