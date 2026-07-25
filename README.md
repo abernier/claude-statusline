@@ -12,47 +12,39 @@
 
 <br>
 
-A single-file Bash statusline for **Claude Code**. It renders your working
-directory and git branch, the active model, context-window usage, and your
-rate-limit windows — 5-hour, 7-day, and the Fable weekly quota — as compact
-color-coded bars.
+One bash script. It shows your folder and branch, the active model, how full the
+context window is, and how much of your 5-hour, 7-day and Fable limits you have
+used — as bars, under the prompt, while you work.
+
+<br>
+
+![The whole statusline from Ctx rightward, every window moving at once.](docs/assets/loop-whole-line.gif)
+
+**[See it in motion → alp82.github.io/claude-statusline](https://alp82.github.io/claude-statusline/)**
 
 </div>
 
 ---
 
-## What it shows
-
-```
-myproject ⎇ main │ ★ Opus 4.8 │ Ctx ▓▓░ 9% │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
-```
-
-- **dir ⎇ branch** — current directory basename and git branch
-- **★ Model** — the active model's display name
-- **Ctx** — context-window usage, 0–100%
-- **5h / 7d** — rate-limit windows as a *stacked* bar: usage (green→yellow→red)
-  over time-elapsed-in-window (blue). Usage sticking out past the blue means
-  you're burning through the window faster than the clock. `↻` shows time to reset.
-- **Fable** — the Fable weekly-scoped quota, pulled from the OAuth usage endpoint
-  (cached, fetched at most every 10 min so it stays out of the TUI's way)
-
-Colors on **5h / 7d / Fable**: green `< 50%`, yellow `50–80%`, red `> 80%`.
-**Ctx** runs tighter — green `< 25%`, yellow `25–49%`, red `≥ 50%` — because a
-full context window stops you working right away.
-
 ## Install
 
+One command. It installs the script and wires Claude Code up to it.
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/docs/install.sh | bash
+curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
 ```
 
-That drops `statusline.sh` into `~/.claude/` and points `settings.json` at it —
-backing up anything it replaces. Re-run it any time to upgrade. Pass
-`--no-settings` to install the script only and wire it up yourself
-(`… | bash -s -- --no-settings`), or `--help` for the rest.
+That drops `statusline.sh` into `~/.claude/`, makes it executable, and points
+`settings.json` at it — backing up anything it replaces. Re-run it any time to
+upgrade. `--no-settings` installs the script only (`… | bash -s -- --no-settings`);
+`--help` has the rest.
 
 <details>
-<summary>Manual install</summary>
+<summary>Or install it by hand</summary>
+
+<br>
+
+One file, nothing else:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
@@ -60,10 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/status
 chmod +x ~/.claude/statusline.sh
 ```
 
-</details>
-
-The wiring the installer writes into `~/.claude/settings.json` — add it yourself
-if you installed manually:
+Then point Claude Code at it yourself, in `~/.claude/settings.json`:
 
 ```json
 {
@@ -74,6 +63,55 @@ if you installed manually:
 }
 ```
 
+</details>
+
+## What it shows
+
+Left to right:
+
+- **dir ⎇ branch** — the current directory's name, and the git branch you are on
+- **★ Model** — the active model's display name
+- **Ctx** — how full the context window is, 0–100%
+- **5h / 7d** — your 5-hour and 7-day rate-limit windows: how much you have used,
+  how much of the window has gone by, and `↻` the time until it resets
+- **Fable** — the same, for Fable's own weekly quota
+
+## How to read it
+
+### Usage against time
+
+![The 5h bar: usage climbing past the blue elapsed-time half, the overshoot glowing.](docs/assets/loop-burn.gif)
+
+The top half of each cell is how much of the window you have used. The bottom
+half is how much of the window has gone by. If the top reaches further right
+than the bottom, you are using it faster than the clock, and you will run out
+before it resets.
+
+Colour follows usage: green under 50%, yellow 50–80%, red above 80%.
+
+### Context window
+
+![The Ctx bar filling to 78%, turning yellow then red, then compacting back down.](docs/assets/loop-context.gif)
+
+Turns yellow at 25% and red at 50% — sooner than the limit bars, because a full
+context window stops you working right away. The bar fills in eighths of a
+character, so it moves before the number does.
+
+### When a window resets
+
+![The 5h bar creeping up, dropping to zero the instant the window resets, then climbing back.](docs/assets/loop-reset.gif)
+
+At the end of a 5-hour window both halves drop back to zero, the colour goes
+back to green, and the countdown starts again at 5h0m.
+
+### The Fable window
+
+![The Fable bar climbing toward 100% while the blue week-elapsed half trails behind it.](docs/assets/loop-fable.gif)
+
+Claude Code does not send this one. The script reads it from `~/.claude.json`
+and only asks the API for a fresh value in the background, at most every ten
+minutes — so it stays out of the TUI's way.
+
 ## Requirements
 
 - `bash`
@@ -82,11 +120,12 @@ if you installed manually:
 
 ## How it works
 
-Claude Code pipes a JSON blob to the script on stdin ([docs](https://code.claude.com/docs/en/statusline.md)).
-Everything but the Fable window comes straight from that payload. The Fable
-weekly quota isn't in it, so the script reads the CLI's own cached copy from
-`~/.claude.json` and only hits `/api/oauth/usage` itself (in the background,
-throttled) when that copy is stale.
+Claude Code pipes a JSON blob to the script on stdin
+([docs](https://code.claude.com/docs/en/statusline.md)). Everything but the
+Fable window comes straight from that payload. The Fable weekly quota isn't in
+it, so the script reads the CLI's own cached copy from `~/.claude.json` and only
+hits `/api/oauth/usage` itself — in the background, throttled — when that copy
+is stale.
 
 ## License
 
