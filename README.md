@@ -43,7 +43,7 @@ full context window stops you working right away.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/docs/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/docs/install.sh | bash
 ```
 
 That drops `statusline.sh` into `~/.claude/` and points `settings.json` at it —
@@ -55,7 +55,7 @@ backing up anything it replaces. Re-run it any time to upgrade. Pass
 <summary>Manual install</summary>
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh \
+curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
   -o ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
 ```

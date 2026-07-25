@@ -5,7 +5,7 @@
 #
 # Lives in docs/ because docs/ is the GitHub Pages root — that is what makes the
 # one-liner above short. It is the only copy; the raw.githubusercontent URL
-# (…/master/docs/install.sh) serves the same file.
+# (…/main/docs/install.sh) serves the same file.
 #
 # Drops statusline.sh into your Claude Code config dir and points settings.json
 # at it. Idempotent: re-running upgrades in place. Anything it overwrites is
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 REPO="alp82/claude-statusline"
-REF="${CLAUDE_STATUSLINE_REF:-master}"
+REF="${CLAUDE_STATUSLINE_REF:-main}"
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 

@@ -452,9 +452,9 @@ noscript img { display:block; width:100%; height:auto; }
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>02</b>Or install it by hand</span>
-                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/master/statusline.sh \
+              <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
     -o ~/.claude/statusline.sh
 $ chmod +x ~/.claude/statusline.sh</pre>
               <div class="note">One file, nothing else. Then add the settings below yourself.</div>
@@ -571,7 +571,7 @@ function statusline(o = {}) {
   const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
   const reset = t => `<span class="reset">${t}</span>`;
   const parts = [
-    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ master</span>`),
+    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
     seg('model', `<span class="star">★</span><span>Opus 5</span>`),
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
