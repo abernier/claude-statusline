@@ -8,8 +8,8 @@
 # (…/main/docs/install.sh) serves the same file.
 #
 # Drops statusline.sh into your Claude Code config dir and points settings.json
-# at it. Idempotent: re-running upgrades in place. Anything it overwrites is
-# backed up next to the original first.
+# at it. Idempotent: re-running upgrades in place. Anything it overwrites or
+# removes — including on --uninstall — is backed up next to the original first.
 
 set -euo pipefail
 
@@ -17,6 +17,13 @@ REPO="alp82/claude-statusline"
 REF="${CLAUDE_STATUSLINE_REF:-main}"
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
+UNINSTALL=0
+
+# Both are cleaned up by one trap, so uninstall (which never fetches) can share
+# the settings writer with install without tripping over an unset $tmp.
+tmp=''
+settings_tmp=''
+trap 'rm -f "$tmp" "$settings_tmp"' EXIT
 
 if [[ -t 1 ]]; then
   BOLD=$'\033[1m'; DIM=$'\033[38;2;138;138;138m'; CLAY=$'\033[38;2;217;119;87m'
@@ -37,12 +44,16 @@ ${BOLD}claude-statusline installer${RESET}
 
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
+  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
 
 Options:
   --dir <path>     Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
   --ref <ref>      branch or tag to install from (default: $REF)
   --no-settings    install the script only; print the settings.json snippet
-                   instead of writing it
+                   instead of writing it. With --uninstall, remove the script
+                   but leave settings.json alone.
+  --uninstall      remove statusline.sh and drop the statusLine entry from
+                   settings.json, backing both up first
   -h, --help       this help
 EOF
 }
@@ -52,6 +63,7 @@ while [[ $# -gt 0 ]]; do
     --dir)          CONFIG_DIR=${2:?--dir needs a path}; shift 2 ;;
     --ref)          REF=${2:?--ref needs a ref}; shift 2 ;;
     --no-settings)  PATCH_SETTINGS=0; shift ;;
+    --uninstall)    UNINSTALL=1; shift ;;
     -h|--help)      usage; exit 0 ;;
     *)              usage >&2; die "unknown option: $1" ;;
   esac
@@ -81,8 +93,11 @@ fi
 
 # --- dependencies -----------------------------------------------------------
 # jq parses the statusline JSON on every render, so it is a hard requirement of
-# the script itself, not just of this installer.
-for dep in curl jq; do
+# the script itself, not just of this installer. Uninstalling fetches nothing,
+# so curl is an install-only need.
+deps=(jq)
+(( UNINSTALL )) || deps+=(curl)
+for dep in "${deps[@]}"; do
   command -v "$dep" >/dev/null 2>&1 \
     || die "$dep is required (statusline.sh needs it too) — install it and re-run."
 done
@@ -115,9 +130,108 @@ settings_snippet() {
   jq -n --arg cmd "$CMD" '{statusLine: {type: "command", command: $cmd}}'
 }
 
+# Rewrite settings.json through the given jq program, atomically. Args are
+# passed to jq verbatim, with $SETTINGS as its input file.
+write_settings() {
+  # Temp file beside the real settings.json (which may live in a dotfile repo,
+  # see above) so the mv is a real rename(2), not a cross-device copy — and out
+  # of world-writable /tmp.
+  settings_tmp=$(mktemp "${SETTINGS%/*}/.settings.json.XXXXXX")
+  jq "$@" "$SETTINGS" > "$settings_tmp" || die "failed to update $SETTINGS"
+  # mv carries the temp file's mode, so match the original first: a
+  # settings.json deliberately kept at 0600 must not come back 0644.
+  if ! chmod --reference="$SETTINGS" "$settings_tmp" 2>/dev/null; then
+    # BSD chmod (macOS) has no --reference; read the mode with BSD stat.
+    # -L: stat defaults to lstat(2), and a symlink's own mode is 0777 —
+    # copying that onto a file holding API keys would publish it.
+    mode=$(stat -Lf '%Lp' "$SETTINGS" 2>/dev/null) || mode=''
+    [[ $mode =~ ^[0-7]{3,4}$ ]] || mode=600
+    chmod "$mode" "$settings_tmp"
+  fi
+  mv "$settings_tmp" "$SETTINGS" || die "failed to update $SETTINGS"
+  settings_tmp=''
+}
+
+# Is this statusLine command one we wrote? The tilde form is what the old README
+# recipe told people to paste, so it counts as ours for the default config dir.
+is_ours() {
+  [[ $1 == "$CMD" ]] \
+    || { [[ $TARGET == "$HOME/.claude/statusline.sh" ]] && [[ $1 == "~/.claude/statusline.sh" ]]; }
+}
+
+# --- uninstall ---------------------------------------------------------------
+if (( UNINSTALL )); then
+  changed=0
+  # -L before -e: a symlink to a deleted target fails -e, and leaving it behind
+  # would keep Claude Code running a statusLine command that cannot resolve.
+  if [[ -L $TARGET || -e $TARGET ]]; then
+    # Same rule as installing: never destroy what was there without a copy. cp -P
+    # keeps a symlink a symlink, so the path it pointed at survives in the backup.
+    cp -Pp "$TARGET" "$TARGET.bak"
+    rm -f "$TARGET"
+    ok "removed $TARGET ${DIM}(backup: $TARGET.bak)${RESET}"
+    changed=1
+  else
+    step "no script at $TARGET"
+  fi
+
+  if (( ! PATCH_SETTINGS )); then
+    step "leaving $SETTINGS alone (--no-settings)"
+  elif [[ ! -f $SETTINGS ]]; then
+    step "no settings.json at $SETTINGS"
+  elif ! shape=$(jq -r '
+        if type == "object" or type == "null"
+        then (.statusLine | type)
+        else "root"
+        end' "$SETTINGS" 2>/dev/null); then
+    warn "$SETTINGS is not valid JSON — leaving it alone; drop the statusLine entry yourself."
+  elif [[ $shape == root ]]; then
+    warn "$SETTINGS is not a JSON object — leaving it alone; drop the statusLine entry yourself."
+  elif [[ $shape == null ]]; then
+    step "$SETTINGS has no statusLine entry"
+  elif [[ $shape != object ]]; then
+    warn "$SETTINGS has a statusLine that is not an object — leaving it alone."
+  else
+    current=$(jq -r '.statusLine.command // ""' "$SETTINGS")
+    if [[ -z $current ]]; then
+      warn "$SETTINGS has a statusLine with no command — leaving it alone."
+    elif ! is_ours "$current"; then
+      # Someone else's statusline, or a hand-edited path. Deleting the entry
+      # would take their statusline away along with ours.
+      warn "$SETTINGS points statusLine at something else — leaving it alone:"
+      warn "  $current"
+    else
+      cp -p "$SETTINGS" "$SETTINGS.bak"
+      write_settings 'del(.statusLine)'
+      ok "unwired $SETTINGS ${DIM}(backup: $SETTINGS.bak)${RESET}"
+      changed=1
+    fi
+  fi
+
+  # The only state the statusline creates on its own: the throttled Fable-usage
+  # fetch. statusline.sh hardcodes these under $HOME, so --dir does not move
+  # them. Regenerable, so they go without a backup.
+  for stale in "$HOME/.claude/cache/oauth-usage.json" "$HOME/.claude/cache/oauth-usage.attempt"; do
+    if [[ -e $stale ]]; then
+      rm -f "$stale"
+      step "removed cached usage ${DIM}${stale}${RESET}"
+      changed=1
+    fi
+  done
+
+  printf '\n'
+  if (( changed )); then
+    ok "${BOLD}Done.${RESET} Open a new Claude Code session; the statusline is gone."
+    printf '%sBackups are left in place — delete the .bak files when you are happy.%s\n' \
+      "$DIM" "$RESET"
+  else
+    ok "${BOLD}Nothing to remove.${RESET} No claude-statusline install found in $CONFIG_DIR."
+  fi
+  exit 0
+fi
+
 # --- fetch ------------------------------------------------------------------
 tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
 
 step "fetching statusline.sh @ $REF"
 curl -fsSL --connect-timeout 10 --max-time 120 "$SOURCE_URL" -o "$tmp" \
@@ -134,8 +248,12 @@ if [[ -L $TARGET ]]; then
   # The old README recipe symlinked this at a git clone. Writing through the
   # link would clobber the clone (including uncommitted work), so break it
   # instead — but say so, because that clone stops being what Claude Code loads.
+  # cp -P copies the link rather than its target, so the path it pointed at is
+  # recoverable from the backup and nothing in the clone is touched.
+  cp -Pp "$TARGET" "$TARGET.bak"
   warn "$TARGET was a symlink → $(readlink "$TARGET")"
   warn "replacing it with a real file; that path is no longer what Claude Code loads."
+  step "backed up the symlink → $TARGET.bak"
 elif [[ -e $TARGET ]] && ! cmp -s "$tmp" "$TARGET"; then
   cp -p "$TARGET" "$TARGET.bak"
   step "backed up existing script → $TARGET.bak"
@@ -180,8 +298,7 @@ if (( PATCH_SETTINGS )); then
   else
     current=$(jq -r '.statusLine.command // ""' "$SETTINGS")
     # a previous install (or the old README recipe) may have written the tilde form
-    if [[ $current == "$CMD" ]] \
-      || { [[ $TARGET == "$HOME/.claude/statusline.sh" ]] && [[ $current == "~/.claude/statusline.sh" ]]; }; then
+    if is_ours "$current"; then
       ok "settings.json already points at it"
       wired=1
     else
@@ -191,25 +308,8 @@ if (( PATCH_SETTINGS )); then
         note=" ${DIM}(backup: $SETTINGS.bak)${RESET}"
         [[ -n $current ]] && step "replacing existing statusLine command ($current)"
       fi
-      # Temp file beside the real settings.json (which may live in a dotfile
-      # repo, see above) so the mv is a real rename(2), not a cross-device
-      # copy — and out of world-writable /tmp.
-      settings_tmp=$(mktemp "${SETTINGS%/*}/.settings.json.XXXXXX")
-      trap 'rm -f "$tmp" "$settings_tmp"' EXIT
-      jq -n --arg cmd "$CMD" \
-        'input? // {} | .statusLine = {type: "command", command: $cmd}' "$SETTINGS" \
-        > "$settings_tmp" || die "failed to update $SETTINGS"
-      # mv carries the temp file's mode, so match the original first: a
-      # settings.json deliberately kept at 0600 must not come back 0644.
-      if ! chmod --reference="$SETTINGS" "$settings_tmp" 2>/dev/null; then
-        # BSD chmod (macOS) has no --reference; read the mode with BSD stat.
-        # -L: stat defaults to lstat(2), and a symlink's own mode is 0777 —
-        # copying that onto a file holding API keys would publish it.
-        mode=$(stat -Lf '%Lp' "$SETTINGS" 2>/dev/null) || mode=''
-        [[ $mode =~ ^[0-7]{3,4}$ ]] || mode=600
-        chmod "$mode" "$settings_tmp"
-      fi
-      mv "$settings_tmp" "$SETTINGS" || die "failed to update $SETTINGS"
+      write_settings -n --arg cmd "$CMD" \
+        'input? // {} | .statusLine = {type: "command", command: $cmd}'
       ok "wired up $SETTINGS$note"
       wired=1
     fi

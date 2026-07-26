@@ -259,6 +259,17 @@ noscript img { display:block; width:100%; height:auto; }
   margin:0 0 6px; font-weight:600; }
 .tail .intro { color:var(--muted); font-size:14px; line-height:1.75; margin:0 0 26px;
   max-width:60ch; }
+/* Install / Uninstall. Without JS the switch is meaningless, so it stays hidden
+   and both panels render one after the other — every step still readable. */
+.tabs { display:none; gap:4px; margin:0 0 22px; padding:3px; border:1px solid var(--line);
+  border-radius:9px; background:var(--sunk); width:max-content; max-width:100%; }
+.js .tabs { display:flex; }
+.tab { font-family:var(--mono); font-size:12.5px; height:30px; padding:0 16px; cursor:pointer;
+  background:transparent; border:0; border-radius:6px; color:var(--faint);
+  transition:color .18s ease, background-color .18s ease; }
+.tab:hover { color:var(--muted); }
+.tab.on { background:#232323; color:var(--brand); }
+.js .tabpanel:not(.on) { display:none; }
 .install { display:flex; flex-direction:column; gap:18px; max-width:var(--measure); }
 .ib { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
   overflow:hidden; }
@@ -437,6 +448,15 @@ noscript img { display:block; width:100%; height:auto; }
 
         <section class="tail" id="install">
           <h2>Install</h2>
+
+          <div class="tabs" role="tablist" aria-label="Install or uninstall">
+            <button class="tab on" role="tab" id="t-add" aria-controls="p-add"
+                    aria-selected="true">Install</button>
+            <button class="tab" role="tab" id="t-rm" aria-controls="p-rm"
+                    aria-selected="false">Uninstall</button>
+          </div>
+
+          <div class="tabpanel on" id="p-add" role="tabpanel" aria-labelledby="t-add">
           <p class="intro">Paste one prompt into Claude Code. It installs the script, wires Claude
             Code up to it, and checks the result.</p>
           <div class="install">
@@ -494,6 +514,44 @@ $ chmod +x ~/.claude/statusline.sh</pre>
           <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. Claude Code sends the script
             JSON on stdin; the Fable number is the only thing the script fetches itself, in the
             background and throttled to once every ten minutes.</p>
+          </div><!-- /p-add -->
+
+          <div class="tabpanel" id="p-rm" role="tabpanel" aria-labelledby="t-rm">
+          <p class="intro">The same prompt in reverse. It removes the script and the
+            <code>statusLine</code> entry, and leaves a backup of each.</p>
+          <div class="install">
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
+                <button class="btn" data-copy="Uninstall the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall&#10;Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer&#10;has a statusLine entry, and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre><span class="p">&gt;</span> Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+  Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
+  has a statusLine entry, and show me which .bak files it left behind.</pre>
+              <div class="note">Claude runs it, reads the result back, and tells you where the
+                backups are.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>02</b>Or run it yourself</span>
+                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall</pre>
+              <div class="note">Deletes <code>~/.claude/statusline.sh</code> and drops the
+                <code>statusLine</code> entry from <code>settings.json</code>, backing up both as
+                <code>.bak</code> first, and clears the cached usage numbers. It touches nothing
+                else in <code>settings.json</code>, and leaves the entry alone if it points at
+                someone else's statusline. <code>--no-settings</code> removes the script only.</div>
+            </div>
+
+          </div>
+          <p class="req">Nothing else to undo — the only state the statusline keeps is the Fable
+            number it caches under <code>~/.claude/cache/</code>, and that goes with it. Delete the
+            <b>.bak</b> files once you are sure you want them gone.</p>
+          </div><!-- /p-rm -->
           <div class="foot">
             <span>MIT</span>
             <a href="https://github.com/alp82/claude-statusline">alp82/claude-statusline</a>
@@ -662,6 +720,26 @@ const cap = document.getElementById('cap');
 const steps = [...document.querySelectorAll('.step')];
 const navLinks = [...document.querySelectorAll('[data-step]')];
 const crops = [...document.querySelectorAll('[data-crop]')];
+
+/* install / uninstall tabs */
+const tabs = [...document.querySelectorAll('[role=tab]')];
+const showTab = t => tabs.forEach(o => {
+  const on = o === t;
+  o.classList.toggle('on', on);
+  o.setAttribute('aria-selected', on);
+  document.getElementById(o.getAttribute('aria-controls')).classList.toggle('on', on);
+});
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => showTab(t));
+  /* arrow keys are what a tablist is expected to answer to */
+  t.addEventListener('keydown', e => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const next = tabs[(i + d + tabs.length) % tabs.length];
+    showTab(next); next.focus();
+  });
+});
 
 document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
   navigator.clipboard?.writeText(b.dataset.copy);

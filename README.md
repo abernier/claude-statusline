@@ -53,9 +53,10 @@ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
 ```
 
 That drops `statusline.sh` into `~/.claude/`, makes it executable, and points
-`settings.json` at it — backing up anything it replaces. Re-run it any time to
-upgrade. `--no-settings` installs the script only (`… | bash -s -- --no-settings`);
-`--help` has the rest.
+`settings.json` at it. Anything it replaces is copied to `<file>.bak` first —
+your own `statusline.sh`, a symlink to a clone, an existing `settings.json`.
+Re-run it any time to upgrade. `--no-settings` installs the script only
+(`… | bash -s -- --no-settings`); `--help` has the rest.
 
 </details>
 
@@ -82,6 +83,34 @@ Then point Claude Code at it yourself, in `~/.claude/settings.json`:
   }
 }
 ```
+
+</details>
+
+## Uninstall
+
+The same prompt in reverse:
+
+```text
+Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
+Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
+has a statusLine entry, and show me which .bak files it left behind.
+```
+
+<details>
+<summary>Or run it yourself</summary>
+
+<br>
+
+```sh
+curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+```
+
+Deletes `~/.claude/statusline.sh`, drops the `statusLine` entry from
+`settings.json` and clears the cached usage numbers under `~/.claude/cache/` —
+backing up the script and `settings.json` as `.bak` first. Everything else in
+`settings.json` is left as it was, and if `statusLine` points at some other
+statusline it is left alone. `--no-settings` removes the script only.
 
 </details>
 
