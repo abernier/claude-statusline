@@ -153,22 +153,14 @@ a { color:inherit; }
 noscript img { display:block; width:100%; height:auto; }
 
 /* ================= controls ================= */
-.btnrow { display:flex; gap:9px; align-items:stretch; flex-wrap:wrap; --h:40px; }
-.btn { height:var(--h); font-family:var(--mono); font-size:13px; cursor:pointer;
-  background:transparent; border:1px solid #333; color:var(--muted); padding:0 15px;
-  border-radius:7px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+/* one size and one job: every button on the page copies something, and each one
+   sits in the header of the block it copies */
+.btn { height:30px; font-family:var(--mono); font-size:12px; cursor:pointer;
+  background:transparent; border:1px solid #333; color:var(--muted); padding:0 11px;
+  border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
   white-space:nowrap; transition:border-color .18s ease, color .18s ease, background-color .18s ease; }
 .btn:hover { border-color:var(--brand); color:var(--brand); }
 .btn svg { width:14px; height:14px; fill:currentColor; flex:0 0 auto; }
-.btn.solid { background:var(--brand); border-color:var(--brand); color:#180f0b; font-weight:600; }
-.btn.solid:hover { filter:brightness(1.09); color:#180f0b; }
-.btn.icon { width:var(--h); padding:0; justify-content:center; }
-.oneliner { height:var(--h); display:flex; align-items:center; border:1px solid var(--line);
-  border-radius:7px; padding:0 15px; font-size:12.5px; color:#c4c4c4; background:var(--sunk);
-  overflow-x:auto; white-space:nowrap; max-width:100%; scrollbar-width:none; }
-.oneliner::-webkit-scrollbar { display:none; }
-/* the caret marks the line as something you type at Claude Code, not at a shell */
-.oneliner i { color:var(--brand); font-style:normal; margin-right:9px; }
 
 /* ================= sidebar ================= */
 .side { position:sticky; top:0; height:100vh; border-right:1px solid var(--hair);
@@ -234,6 +226,11 @@ noscript img { display:block; width:100%; height:auto; }
   line-height:1.2; margin:0 0 12px; max-width:22ch; }
 .hero .sub { color:var(--muted); font-size:14.5px; line-height:1.75; max-width:62ch;
   margin:0 0 24px; }
+/* what to do with the prompt, then the two ways out of the hero */
+.hero .after { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:14px;
+  color:var(--faint); font-size:12.5px; }
+.hero .after a { text-decoration:none; border-bottom:1px solid #333; padding-bottom:1px; }
+.hero .after a:hover { color:var(--brand); border-bottom-color:var(--brand); }
 
 /* Baseline is the readable one: dimming the inactive sections only makes sense
    once there is JS to undim the active one, so it hangs off the `js` class. */
@@ -277,7 +274,17 @@ noscript img { display:block; width:100%; height:auto; }
   padding:13px 18px; border-bottom:1px solid var(--hair); background:#131313; }
 .ib-lbl { color:#9d9d9d; font-size:12.5px; display:flex; align-items:center; gap:11px; }
 .ib-lbl b { color:var(--brand); font-weight:600; font-size:11px; }
-.ib-head .btn { height:30px; padding:0 11px; font-size:12px; border-radius:6px; }
+/* the hero's copy of the block: the prompt IS the call to action, so the whole
+   surface is the copy target and the brand rule marks it as the way in. The
+   button stays real for keyboard and screen readers — see the click forwarding
+   at the foot of the page. */
+.ib.paste { max-width:var(--measure); border-left:2px solid var(--brand); cursor:pointer;
+  transition:border-color .18s ease, background-color .18s ease; }
+.ib.paste:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
+  border-left-color:var(--brand);
+  background:color-mix(in srgb, var(--brand) 4%, var(--sunk)); }
+.ib.paste .btn { color:var(--brand); border-color:color-mix(in srgb, var(--brand) 45%, transparent); }
+.ib.paste:hover .btn { border-color:var(--brand); }
 .ib pre { margin:0; padding:16px 18px; font-family:var(--mono); font-size:12.5px;
   line-height:1.85; color:#d2d2d2; overflow-x:auto; background:transparent;
   scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
@@ -372,10 +379,23 @@ noscript img { display:block; width:100%; height:auto; }
           <p class="sub">One bash script. It shows your folder and branch, the model, how full the
             context window is, and how much of your 5-hour, 7-day and Fable limits you have used —
             as bars, under the prompt, while you work.</p>
-          <div class="btnrow">
-            <button class="btn solid" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
-            <span class="oneliner"><i>&gt;</i> Install the statusline from github.com/alp82/claude-statusline for me…</span>
-            <a class="btn icon" href="https://github.com/alp82/claude-statusline" title="View on GitHub" aria-label="View on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg></a>
+          <!-- The prompt in full, as the thing you click. The visible <pre> and the
+               button's data-copy are the same four lines twice over — they must
+               stay in step, and they must match install step 01 further down. -->
+          <div class="ib paste" data-copy-surface>
+            <div class="ib-head">
+              <span class="ib-lbl">The prompt for Claude Code</span>
+              <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+            </div>
+            <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+  Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+          </div>
+          <div class="after">
+            <span>Paste it into Claude Code and press return.</span>
+            <a href="#install">Install it by hand</a>
+            <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
           </div>
         </header>
 
@@ -747,6 +767,16 @@ document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click'
   b.textContent = 'copied';
   setTimeout(() => (b.innerHTML = was), 1200);
 }));
+
+/* clicking anywhere on the hero's prompt is the same as pressing its button —
+   the button stays the real control, so keyboard and screen readers are unaffected */
+document.querySelectorAll('[data-copy-surface]').forEach(surface => {
+  const btn = surface.querySelector('[data-copy]');
+  surface.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    btn.click();
+  });
+});
 
 /* scroll picks the active section: the sidebar highlight, the deepened band, and
    which loop the docked line plays */
