@@ -161,6 +161,12 @@ Claude Code does not send this one. The script reads it from `~/.claude.json`
 and only asks the API for a fresh value in the background, at most every ten
 minutes — so it stays out of the TUI's way.
 
+On macOS that refresh needs the OAuth token from the Keychain, because Claude
+Code stores it there instead of in `~/.claude/.credentials.json`. The first read
+can open a Keychain dialog. Click **Always Allow** once and it stops asking. To
+skip the Keychain read altogether, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1` — the
+Fable bar then follows the CLI's own cache only.
+
 ## Requirements
 
 - `bash`

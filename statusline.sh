@@ -24,9 +24,17 @@ IFS=$'\t' read -r model dir version ctx_pct five_pct five_reset week_pct week_re
 USAGE_CACHE="$HOME/.claude/cache/oauth-usage.json"
 USAGE_STAMP="$HOME/.claude/cache/oauth-usage.attempt"
 now_s=$(date +%s)
-file_age() { [[ -f "$1" ]] && echo $(( now_s - $(stat -c %Y "$1") )) || echo 999999; }
+# GNU stat first: BSD stat (macOS) rejects -c cleanly, but GNU stat reads -f as
+# --file-system and dumps the whole file system to stdout before it fails.
+mtime() {
+  local t
+  t=$(stat -c %Y "$1" 2>/dev/null) || t=$(stat -f %m "$1" 2>/dev/null)
+  [[ $t =~ ^[0-9]+$ ]] || t=0
+  echo "$t"
+}
+file_age() { [[ -f "$1" ]] && echo $(( now_s - $(mtime "$1") )) || echo 999999; }
 
-cache_ts=0; [[ -f "$USAGE_CACHE" ]] && cache_ts=$(stat -c %Y "$USAGE_CACHE")
+cache_ts=0; [[ -f "$USAGE_CACHE" ]] && cache_ts=$(mtime "$USAGE_CACHE")
 cli_ts=$(jq -r '.cachedUsageUtilization.fetchedAtMs // 0 | . / 1000 | floor' "$HOME/.claude.json" 2>/dev/null)
 cli_ts=${cli_ts:-0}
 if (( cli_ts >= cache_ts )); then
@@ -41,6 +49,13 @@ if (( now_s - best_ts > 1800 )) && (( $(file_age "$USAGE_STAMP") > 600 )); then
   touch "$USAGE_STAMP"
   (
     tok=$(jq -r '.claudeAiOauth.accessToken // empty' "$HOME/.claude/.credentials.json" 2>/dev/null)
+    # macOS keeps the token in the Keychain, not in .credentials.json. Reading it
+    # from here can raise a Keychain dialog once, because the ACL is per binary.
+    # Set CLAUDE_STATUSLINE_NO_KEYCHAIN=1 to skip the lookup and the dialog.
+    if [[ -z "$tok" && -z "$CLAUDE_STATUSLINE_NO_KEYCHAIN" ]]; then
+      tok=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null \
+        | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
+    fi
     [[ -n "$tok" ]] || exit 0
     resp=$(curl -sS --max-time 5 https://api.anthropic.com/api/oauth/usage \
       -H "Authorization: Bearer $tok" -H "anthropic-beta: oauth-2025-04-20" \
@@ -65,7 +80,12 @@ if [[ -n "$usage_json" ]]; then
   if [[ "$fable_reset_raw" =~ ^[0-9]+$ ]]; then
     fable_reset=$fable_reset_raw
   elif [[ -n "$fable_reset_raw" ]]; then
-    fable_reset=$(date -d "$fable_reset_raw" +%s 2>/dev/null || echo 0)
+    # BSD date (macOS) has no -d. Its -f parser also chokes on the fractional
+    # seconds and the offset, so feed it the first 19 chars. resets_at is UTC,
+    # and -u makes BSD date read those 19 chars as UTC too.
+    fable_reset=$(date -d "$fable_reset_raw" +%s 2>/dev/null \
+      || date -j -u -f '%Y-%m-%dT%H:%M:%S' "${fable_reset_raw:0:19}" +%s 2>/dev/null \
+      || echo 0)
   fi
 fi
 
