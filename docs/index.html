@@ -167,7 +167,7 @@ noscript img { display:block; width:100%; height:auto; }
   padding:34px 20px; display:flex; flex-direction:column; z-index:7; background:var(--bg); }
 .side .brand { font-size:15px; margin-bottom:4px; letter-spacing:-.01em; }
 .side .brand b { color:var(--brand); font-weight:600; }
-.side .ver { color:#565656; font-size:11px; margin-bottom:30px; }
+.side .ver { color:#565656; font-size:11px; margin-bottom:16px; }
 .side .grp { color:#4f4f4f; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
   margin:0 0 10px 14px; }
 .side nav { margin-bottom:24px; }
@@ -181,20 +181,18 @@ noscript img { display:block; width:100%; height:auto; }
   background:color-mix(in srgb, var(--stepc, var(--brand)) 13%, transparent); }
 .side nav a.on i { color:var(--stepc, var(--brand)); }
 
-/* author card — pinned to the foot of the sidebar, so it sits under the fold of
-   the nav on every section without ever competing with the walkthrough */
-.side .author { margin-top:auto; padding-top:18px; border-top:1px solid var(--hair); }
-.side .author a { display:flex; align-items:center; gap:10px; text-decoration:none;
-  padding:9px 11px; border-radius:8px; background:var(--sunk); border:1px solid var(--hair);
-  color:#c4c4c4;
+/* the two off-page links, as one pair of matching pills under the brand: both
+   are the same card, and both are small enough not to compete with the nav.
+   They sit on one row at 236px and wrap only if the sidebar ever narrows. */
+.side .social { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:26px; }
+.side .social a { display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  padding:6px 8px; border-radius:7px; background:var(--sunk); border:1px solid var(--hair);
+  color:#c4c4c4; font-size:11px; line-height:1.2;
   transition:border-color .25s ease, background-color .25s ease, color .25s ease; }
-/* one hover driver: `color` carries both the handle and the currentColor icon */
-.side .author a:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
+/* one hover driver: `color` carries both the label and the currentColor icon */
+.side .social a:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
   background:color-mix(in srgb, var(--brand) 10%, var(--sunk)); color:var(--brand); }
-.side .author svg { width:13px; height:13px; flex:none; fill:currentColor; }
-.side .author .who { display:flex; flex-direction:column; line-height:1.3; min-width:0; }
-.side .author .lbl { font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:#4f4f4f; }
-.side .author .at { font-size:12.5px; }
+.side .social svg { width:12px; height:12px; flex:none; fill:currentColor; }
 .shell { display:grid; grid-template-columns:236px minmax(0,1fr); }
 
 /* ================= app frame ================= */
@@ -335,6 +333,16 @@ noscript img { display:block; width:100%; height:auto; }
   <aside class="side">
     <div class="brand"><b>claude</b>-statusline</div>
     <div class="ver">one bash file · MIT</div>
+    <div class="social">
+      <a href="https://github.com/alp82/claude-statusline" target="_blank" rel="noopener" title="claude-statusline on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a href="https://x.com/alperortac" target="_blank" rel="noopener me" title="Alper Ortac on X">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <span>@alperortac</span>
+      </a>
+    </div>
     <nav><a href="#start">Start</a></nav>
     <div class="grp">Walkthrough</div>
     <nav class="stepnav">
@@ -347,14 +355,7 @@ noscript img { display:block; width:100%; height:auto; }
     <div class="grp">Reference</div>
     <nav>
       <a href="#install">Install</a>
-      <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
     </nav>
-    <div class="author">
-      <a href="https://x.com/alperortac" target="_blank" rel="noopener me" title="Alper Ortac on X">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        <span class="who"><span class="lbl">Built by</span><span class="at">@alperortac</span></span>
-      </a>
-    </div>
   </aside>
 
   <main class="main"><div class="app">
