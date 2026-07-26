@@ -167,6 +167,8 @@ noscript img { display:block; width:100%; height:auto; }
   border-radius:7px; padding:0 15px; font-size:12.5px; color:#c4c4c4; background:var(--sunk);
   overflow-x:auto; white-space:nowrap; max-width:100%; scrollbar-width:none; }
 .oneliner::-webkit-scrollbar { display:none; }
+/* the caret marks the line as something you type at Claude Code, not at a shell */
+.oneliner i { color:var(--brand); font-style:normal; margin-right:9px; }
 
 /* ================= sidebar ================= */
 .side { position:sticky; top:0; height:100vh; border-right:1px solid var(--hair);
@@ -268,6 +270,7 @@ noscript img { display:block; width:100%; height:auto; }
 .ib pre { margin:0; padding:16px 18px; font-family:var(--mono); font-size:12.5px;
   line-height:1.85; color:#d2d2d2; overflow-x:auto; background:transparent;
   scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+.ib pre .p { color:var(--brand); }   /* Claude Code prompt caret */
 .ib pre .c { color:#5d5d5d; }        /* comment */
 .ib pre .k { color:var(--dirc); }    /* json key */
 .ib pre .s { color:var(--green); }   /* string */
@@ -359,8 +362,8 @@ noscript img { display:block; width:100%; height:auto; }
             context window is, and how much of your 5-hour, 7-day and Fable limits you have used —
             as bars, under the prompt, while you work.</p>
           <div class="btnrow">
-            <button class="btn solid" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
-            <span class="oneliner">$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</span>
+            <button class="btn solid" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+            <span class="oneliner"><i>&gt;</i> Install the statusline from github.com/alp82/claude-statusline for me…</span>
             <a class="btn icon" href="https://github.com/alp82/claude-statusline" title="View on GitHub" aria-label="View on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg></a>
           </div>
         </header>
@@ -434,24 +437,39 @@ noscript img { display:block; width:100%; height:auto; }
 
         <section class="tail" id="install">
           <h2>Install</h2>
-          <p class="intro">One command. It installs the script and wires Claude Code up to it.</p>
+          <p class="intro">Paste one prompt into Claude Code. It installs the script, wires Claude
+            Code up to it, and checks the result.</p>
           <div class="install">
 
             <div class="ib">
               <div class="ib-head">
-                <span class="ib-lbl"><b>01</b>Install it</span>
-                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
+                <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
-              <div class="note">Drops <code>statusline.sh</code> into <code>~/.claude/</code>, makes
-                it executable and points <code>settings.json</code> at it — backing up anything it
-                replaces. Re-run it to upgrade. <code>--no-settings</code> installs the script only;
-                <code>--help</code> has the rest.</div>
+              <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+  Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+              <div class="note">Claude reads the installer before it runs it, tells you what changed,
+                and fixes anything missing. Re-paste it to upgrade.</div>
             </div>
 
             <div class="ib">
               <div class="ib-head">
-                <span class="ib-lbl"><b>02</b>Or install it by hand</span>
+                <span class="ib-lbl"><b>02</b>Or run the installer yourself</span>
+                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
+              <div class="note">Same script, no agent in the middle. Drops <code>statusline.sh</code>
+                into <code>~/.claude/</code>, makes it executable and points
+                <code>settings.json</code> at it — backing up anything it replaces. Re-run it to
+                upgrade. <code>--no-settings</code> installs the script only; <code>--help</code> has
+                the rest.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>03</b>Or install it by hand</span>
                 <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
@@ -462,14 +480,14 @@ $ chmod +x ~/.claude/statusline.sh</pre>
 
             <div class="ib">
               <div class="ib-head">
-                <span class="ib-lbl"><b>03</b>Point Claude Code at it</span>
+                <span class="ib-lbl"><b>04</b>Point Claude Code at it</span>
                 <button class="btn" data-copy='{ "statusLine": { "type": "command", "command": "~/.claude/statusline.sh" } }'><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre><span class="c">// ~/.claude/settings.json</span>
 { <span class="k">"statusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
     <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> } }</pre>
-              <div class="note">The one-liner writes this for you. You need it only after a manual
-                install, or after <code>--no-settings</code>.</div>
+              <div class="note">The prompt and the one-liner both write this for you. You need it
+                only after a manual install, or after <code>--no-settings</code>.</div>
             </div>
 
           </div>

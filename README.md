@@ -28,7 +28,25 @@ used — as bars, under the prompt, while you work.
 
 ## Install
 
-One command. It installs the script and wires Claude Code up to it.
+Paste this into Claude Code. It installs the script, wires Claude Code up to it,
+and checks the result.
+
+```text
+Install the statusline from https://github.com/alp82/claude-statusline for me.
+Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+points statusLine at ~/.claude/statusline.sh, and tell me what to do next.
+```
+
+Claude reads the installer before it runs it, tells you what changed, and fixes
+anything missing. Re-paste it any time to upgrade.
+
+<details>
+<summary>Or run the installer yourself</summary>
+
+<br>
+
+Same script, no agent in the middle:
 
 ```sh
 curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
@@ -38,6 +56,8 @@ That drops `statusline.sh` into `~/.claude/`, makes it executable, and points
 `settings.json` at it — backing up anything it replaces. Re-run it any time to
 upgrade. `--no-settings` installs the script only (`… | bash -s -- --no-settings`);
 `--help` has the rest.
+
+</details>
 
 <details>
 <summary>Or install it by hand</summary>
