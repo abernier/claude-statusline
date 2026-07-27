@@ -10,7 +10,8 @@ import {
 import {Scene, fitFontSize} from './Scene';
 import {segmentCenterX, statuslineWidth} from './terminal/Camera';
 import {TypedComment} from './terminal/TypedComment';
-import {SAMPLE_STATE} from './sample';
+import {SAMPLE_FIVE_ELAPSED, SAMPLE_STATE} from './sample';
+import {FIVE_WINDOW, remaining} from './stories';
 import type {SegmentId} from './statusline/types';
 
 const REVEAL_ORDER: SegmentId[] = ['dir', 'model', 'ctx', 'five', 'week', 'fable'];
@@ -35,7 +36,7 @@ export const Scaffold: React.FC = () => {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const fiveElapsed = interpolate(frame, [s(5), s(8)], [22, 46], {
+  const fiveElapsed = interpolate(frame, [s(5), s(8)], [SAMPLE_FIVE_ELAPSED, 46], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -65,7 +66,8 @@ export const Scaffold: React.FC = () => {
           five: {
             pct: fiveUsage,
             elapsed: fiveElapsed,
-            resetsIn: interpolate(frame, [0, s(10)], [3 * 3600 + 40 * 60, 3 * 3600]),
+            // Derived, so the countdown and the blue half never drift apart.
+            resetsIn: remaining(fiveElapsed, FIVE_WINDOW),
           },
         }}
         fontSize={fontSize}

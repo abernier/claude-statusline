@@ -17,7 +17,7 @@ export const LOOP_FRAMES = 120;
  */
 const SINGLE = {width: 1000, height: 200, fontSize: 48};
 
-/** The whole line from `Ctx` rightward: 109 cells, so it needs the room. */
+/** The whole line from `Ctx` rightward: 106 cells, so it needs the room. */
 const WHOLE = {width: 2240, height: 180, fontSize: 32};
 
 export type LoopComposition = {
@@ -41,8 +41,8 @@ export const SOCIAL = {
   width: 1280,
   height: 640,
   /**
-   * The largest size at which all 109 cells still clear the frame's padding:
-   * (1280 − 2×28 outer − 2×46 inline) / 109 cells / 0.6 advance ≈ 17.3.
+   * The largest size at which all 106 cells still clear the frame's padding:
+   * (1280 − 2×28 outer − 2×46 inline) / 106 cells / 0.6 advance ≈ 17.8.
    */
   statuslineFontSize: 17,
 } as const;

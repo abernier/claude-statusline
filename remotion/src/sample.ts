@@ -1,13 +1,36 @@
+import {
+  FIVE_WINDOW,
+  WEEK_ELAPSED,
+  WEEK_WINDOW,
+  ctxTokens,
+  remaining,
+} from './stories';
 import type {StatuslineState} from './statusline/types';
 
-/** The line as it looks on this repo — the baseline every loop starts from. */
+/** How far into the 5-hour window this baseline sits. */
+export const SAMPLE_FIVE_ELAPSED = 22;
+
+/**
+ * The line as it looks on this repo — the baseline every loop starts from.
+ * Every derived field is derived, not typed in: the countdowns come from the
+ * elapsed readings, the token count from the context percentage, and the Fable
+ * bar from the 7-day clock it resets with.
+ */
 export const SAMPLE_STATE: StatuslineState = {
   dir: 'claude-statusline',
   branch: 'main',
-  model: 'Opus 4.8',
+  model: 'Opus 5',
   ctx: 19,
-  ctxTokens: 38000,
-  five: {pct: 12, elapsed: 22, resetsIn: 3 * 3600 + 40 * 60},
-  week: {pct: 16, elapsed: 48, resetsIn: 3 * 86400 + 10 * 3600},
-  fable: {pct: 7, elapsed: 48},
+  ctxTokens: ctxTokens(19),
+  five: {
+    pct: 12,
+    elapsed: SAMPLE_FIVE_ELAPSED,
+    resetsIn: remaining(SAMPLE_FIVE_ELAPSED, FIVE_WINDOW),
+  },
+  week: {
+    pct: 16,
+    elapsed: WEEK_ELAPSED,
+    resetsIn: remaining(WEEK_ELAPSED, WEEK_WINDOW),
+  },
+  fable: {pct: 7, elapsed: WEEK_ELAPSED},
 };

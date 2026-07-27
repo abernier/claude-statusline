@@ -6,8 +6,8 @@
 import type {SegmentId, StatuslineState} from './statusline/types';
 
 /** Window lengths in seconds, as statusline.sh uses them. */
-const FIVE_WINDOW = 5 * 3600;
-const WEEK_WINDOW = 7 * 86400;
+export const FIVE_WINDOW = 5 * 3600;
+export const WEEK_WINDOW = 7 * 86400;
 
 const easeIn = (p: number): number => p * p;
 const easeOut = (p: number): number => 1 - (1 - p) * (1 - p);
@@ -31,21 +31,27 @@ const cyc = (
  * window we are, so it has to be derived from `elapsed` or the bar and the `↻`
  * drift apart.
  */
-const remaining = (elapsedPct: number, windowSeconds: number): number =>
-  Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
+export const remaining = (
+  elapsedPct: number,
+  windowSeconds: number
+): number => Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
 
 /**
- * The 7-day window is background scenery in the only loop it appears in: it sits
- * just past halfway, which is what puts its countdown at `↻3d10h`.
+ * Where the 7-day window starts every loop: just past halfway, which is what
+ * puts its countdown at `↻3d10h`. The Fable window resets with the 7-day one,
+ * so this one reading is the blue half of *both* bars — never two numbers.
  */
-const WEEK_ELAPSED = 51;
+export const WEEK_ELAPSED = 51;
 
 /**
  * The token count is not a free variable either — it is the same reading as the
- * context percentage, so it is derived from it against a 200k window.
+ * context percentage, so it is derived from it against a 1M window, which is
+ * what every current Claude model has. The percentage is rounded first, because
+ * that is the number printed beside it: 38% has to read as 380k, not 379k.
  */
-const CTX_WINDOW = 200000;
-const ctxTokens = (pct: number): number => Math.round((pct / 100) * CTX_WINDOW);
+const CTX_WINDOW = 1000000;
+export const ctxTokens = (pct: number): number =>
+  Math.round((Math.round(pct) / 100) * CTX_WINDOW);
 
 export type Story = {
   id: string;
@@ -86,13 +92,21 @@ const burn: Story = {
   },
 };
 
-/** 02 — the context window fills to ~78%, then compacts back down. */
+/**
+ * 02 — the context window fills to ~78%, then compacts back down.
+ *
+ * Compaction does not empty the window — it leaves a summary behind, so the arc
+ * runs between 6% and 78% rather than 0% and 78%. A 0% frame would also drop the
+ * token count (the script hides it at zero) and shorten the segment mid-loop.
+ */
+const CTX_FLOOR = 6;
+
 const context: Story = {
   id: 'context',
   slug: 'loop-context',
-  summary: 'context filling to 78%, then compacting',
+  summary: 'context filling to 78%, then compacting back to the summary',
   at: (p) => {
-    const ctx = cyc(p, 78, 0.92, easeOut);
+    const ctx = CTX_FLOOR + cyc(p, 78 - CTX_FLOOR, 0.92, easeOut);
     return {ctx, ctxTokens: ctxTokens(ctx)};
   },
 };
@@ -131,18 +145,38 @@ const reset: Story = {
   },
 };
 
-/** 04 — the Fable weekly quota burning faster than the week goes by. */
+/**
+ * 04 — the Fable weekly quota, spent long before the week is over.
+ *
+ * Usage runs to 100% in the first half of the loop and then just sits there:
+ * nothing gives the quota back except the weekly reset, so the only thing still
+ * moving is the blue clock, which runs the whole way to the end of the window.
+ * At the reset both drop to zero — which is where the loop starts, so the seam
+ * *is* the reset rather than a rewind.
+ */
+/** Loop progress at which the weekly window turns over. */
+const FABLE_RESET_AT = 0.9;
+/** Loop progress at which the quota is spent. */
+const FABLE_SPENT_AT = 0.42;
+
+/**
+ * The blue half of the Fable bar is the 7-day clock, so the page drives its
+ * docked `7d` segment from this same reading — one clock, two bars in step.
+ */
+const fableWeekElapsed = (p: number): number =>
+  p >= FABLE_RESET_AT ? 0 : (p / FABLE_RESET_AT) * 100;
+
 const fable: Story = {
   id: 'fable',
   slug: 'loop-fable',
-  summary: 'Fable usage climbing while the blue week trails behind',
+  summary: 'Fable quota spent early, then waiting out the week for the reset',
   at: (p) => {
-    const elapsed = cyc(p, 74, 0.93);
-    return {
-      // No resetsIn: the Fable segment prints no countdown, because its window
-      // resets with the 7-day one.
-      fable: {pct: cyc(p, 100, 0.93), elapsed},
-    };
+    const elapsed = fableWeekElapsed(p);
+    const pct =
+      p >= FABLE_RESET_AT ? 0 : 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT));
+    // No resetsIn: the Fable segment prints no countdown, because its window
+    // resets with the 7-day one.
+    return {fable: {pct, elapsed}};
   },
 };
 
@@ -152,9 +186,13 @@ const wholeLine: Story = {
   slug: 'loop-whole-line',
   summary: 'the whole line from Ctx rightward, all four windows moving',
   at: (p) => {
+    // One wall clock drives every blue half. The loop is a time-lapse of 3.6
+    // hours — 72% of a 5-hour window, and 2.1 points of a 7-day one — so the
+    // three clocks advance by the same real time rather than at three rates.
     const fiveElapsed = cyc(p, 72, 0.95);
-    const fableElapsed = cyc(p, 20, 0.95);
-    const ctx = cyc(p, 58, 0.95);
+    const weekElapsed =
+      WEEK_ELAPSED + (fiveElapsed * FIVE_WINDOW) / WEEK_WINDOW;
+    const ctx = CTX_FLOOR + cyc(p, 52, 0.95);
     return {
       ctx,
       ctxTokens: ctxTokens(ctx),
@@ -165,10 +203,11 @@ const wholeLine: Story = {
       },
       week: {
         pct: 12 + cyc(p, 10, 0.95),
-        elapsed: WEEK_ELAPSED,
-        resetsIn: remaining(WEEK_ELAPSED, WEEK_WINDOW),
+        elapsed: weekElapsed,
+        resetsIn: remaining(weekElapsed, WEEK_WINDOW),
       },
-      fable: {pct: 7 + cyc(p, 26, 0.95), elapsed: fableElapsed},
+      // The Fable window resets with the 7-day one, so it reads the same clock.
+      fable: {pct: 7 + cyc(p, 26, 0.95), elapsed: weekElapsed},
     };
   },
 };

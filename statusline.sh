@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code statusline: dir ⎇branch │ ★ Model │ Ctx ▓▓░ 9% 18k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
+# Claude Code statusline: dir ⎇branch │ ★ Model │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
 # Reads the statusline JSON from stdin (see https://code.claude.com/docs/en/statusline.md)
 
 input=$(cat)

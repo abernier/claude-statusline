@@ -142,7 +142,7 @@ Colour follows usage: green under 50%, yellow 50–80%, red above 80%.
 
 ### Context window
 
-![The Ctx bar filling to 78%, turning yellow then red, then compacting back down.](docs/assets/loop-context.gif)
+![The Ctx bar filling to 78%, turning yellow then red, then compacting back down to the summary.](docs/assets/loop-context.gif)
 
 Turns yellow at 25% and red at 50% — sooner than the limit bars, because a full
 context window stops you working right away. The bar fills in eighths of a
@@ -157,7 +157,11 @@ back to green, and the countdown starts again at 5h0m.
 
 ### The Fable window
 
-![The Fable bar climbing toward 100% while the blue week-elapsed half trails behind it.](docs/assets/loop-fable.gif)
+![The Fable bar at 100%, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
+
+Fable has its own weekly quota. Spend it early and nothing gives it back before
+the week is over, so the blue half is the useful one: it tells you how long the
+wait is. The window resets with the 7-day one, which is why it shows no `↻`.
 
 Claude Code does not send this one. The script reads it from `~/.claude.json`
 and only asks the API for a fresh value in the background, at most every ten

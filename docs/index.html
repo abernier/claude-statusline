@@ -426,7 +426,7 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="crop">
             <div class="slh" data-crop="1" aria-hidden="true"></div>
             <noscript><img src="assets/loop-context.gif" width="1000" height="200"
-              alt="The Ctx bar filling to 78%, turning yellow then red, then compacting back down."></noscript>
+              alt="The Ctx bar filling to 78%, turning yellow then red, then compacting back down to the summary."></noscript>
           </div>
         </section>
 
@@ -447,12 +447,15 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
           <div class="n">04</div>
           <h2>The Fable window</h2>
+          <p>Fable has its own weekly quota. Spend it early and nothing gives it back before the
+            week is over, so the blue half is the useful one: it tells you how long the wait is.
+            The window resets with the 7-day one, which is why it shows no ↻ of its own.</p>
           <p>Claude Code does not send this one. The script reads it from ~/.claude.json and only
             asks the API for a fresh value in the background, at most every ten minutes.</p>
           <div class="crop">
             <div class="slh" data-crop="3" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="200"
-              alt="The Fable bar climbing toward 100% while the blue week-elapsed half trails behind it."></noscript>
+              alt="The Fable bar at 100%, holding while the blue week-elapsed half runs to the reset."></noscript>
           </div>
         </section>
 
@@ -611,12 +614,12 @@ const CELL_EM = 0.6;                    // mono advance width (theme.ts cellWidt
 const FIVE_WINDOW = 5 * 3600;
 const WEEK_WINDOW = 7 * 86400;
 
-/* pct_color() :78 — 5h / 7d / Fable */
+/* pct_color() :106 — 5h / 7d / Fable */
 const pctColor = p => p > 80 ? 'var(--red)' : p >= 50 ? 'var(--yellow)' : 'var(--green)';
-/* ctx_color() :86 — tighter, because a full context window stops you at once */
+/* ctx_color() :114 — tighter, because a full context window stops you at once */
 const ctxColor = p => p >= 50 ? 'var(--red)' : p >= 25 ? 'var(--yellow)' : 'var(--green)';
 
-/* fmt_reset() :128 — now / 45m / 7h9m / 3d10h */
+/* fmt_reset() :165 — now / 45m / 7h9m / 3d10h */
 const fmtReset = secs => {
   const s = Math.max(0, Math.round(secs));
   if (s <= 60) return '↻now';
@@ -624,22 +627,23 @@ const fmtReset = secs => {
   if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
   return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
 };
-/* fmt_tokens() — context tokens in thousands, 1k … 999k. The page has only the
-   percentage, so the count is derived from it against a 200k window. */
-const CTX_WINDOW = 200000;
+/* fmt_tokens() :158 — context tokens in thousands, 1k … 999k. The page has only
+   the percentage, so the count is derived from it against a 1M window, which is
+   what every current Claude model has. */
+const CTX_WINDOW = 1000000;
 const fmtTokens = pct =>
   `${Math.min(999, Math.max(1, Math.round((pct / 100) * CTX_WINDOW / 1000)))}k`;
-/* the inverse of elapsed_pct() :154 — the countdown is a reading of how far into
+/* the inverse of elapsed_pct() :195 — the countdown is a reading of how far into
    the window we are, so it is derived, never animated on its own */
 const remaining = (elapsedPct, windowSeconds) =>
   Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
 
-/* bar() :94 — solid fill at 1/8-cell resolution on a dark track */
+/* bar() :122 — solid fill at 1/8-cell resolution on a dark track */
 function plainBar(pct, color) {
   const eighths = Math.floor((Math.max(0, Math.min(100, pct)) * CELLS * 8) / 100);
   return `<span class="bar plain"><span class="fill" style="width:${(eighths / 8) * CELL_EM}em;background:${color}"></span></span>`;
 }
-/* stacked_bar() :110 — usage on the top half of each cell, window-time-elapsed
+/* stacked_bar() :138 — usage on the top half of each cell, window-time-elapsed
    (blue) on the bottom half, both snapped to whole cells, as `▀` forces */
 function stackedBar(usage, elapsed, color, glow) {
   const u = Math.max(0, Math.min(100, usage)), t = Math.max(0, Math.min(100, elapsed));
@@ -657,8 +661,10 @@ function stackedBar(usage, elapsed, color, glow) {
   return `<span class="bar">${cells}</span>`;
 }
 
-/* The idle line, for whatever a story leaves alone. */
-const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7, fableT:48,
+/* The idle line, for whatever a story leaves alone. There is no `fableT`: the
+   Fable window resets with the 7-day one, so `weekT` is the blue half of both
+   bars and the two can never drift apart. */
+const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7,
                   glow:false, only:null, focus:null, compact:false};
 
 /* `compact` drops dir/branch/model — the line from Ctx rightward;
@@ -681,7 +687,7 @@ function statusline(o = {}) {
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
     seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
-    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.fableT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
   ].filter(Boolean);
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to
@@ -701,15 +707,20 @@ const linear = p => p;
 /* ramp 0→peak by `drain`, then fall back to 0 by p=1 */
 const cyc = (p, peak, drain = 0.9, ease = linear) =>
   p < drain ? peak * ease(p / drain) : peak * (1 - (p - drain) / (1 - drain));
-/* the 7-day window is scenery in the one loop it appears in: just past halfway */
+/* where the 7-day window starts every loop: just past halfway, which is what
+   puts its countdown at ↻3d10h */
 const WEEK_ELAPSED = 51;
+/* compaction leaves a summary behind, so the context arc floors here, not at 0 */
+const CTX_FLOOR = 6;
+/* 04's two beats: the quota is spent, then the weekly window turns over */
+const FABLE_SPENT_AT = 0.42, FABLE_RESET_AT = 0.9;
 
 const STORIES = [
   /* 01 — the clock opens quickly and flattens; usage starts gently and
      accelerates, so the crossing itself is the event */
   p => ({five: cyc(p, 100, 0.9, q => q ** 1.5), fiveT: cyc(p, 62, 0.9, easeOut), glow: true}),
-  /* 02 — the context window fills, then compacts */
-  p => ({ctx: cyc(p, 78, 0.92, easeOut)}),
+  /* 02 — the context window fills, then compacts back to the summary */
+  p => ({ctx: CTX_FLOOR + cyc(p, 78 - CTX_FLOOR, 0.92, easeOut)}),
   /* 03 — creep, then an instant drop to zero, held a beat, then the climb back */
   p => {
     let pct, elapsed;
@@ -721,13 +732,24 @@ const STORIES = [
     }
     return {five: pct, fiveT: elapsed};
   },
-  /* 04 — Fable burns faster than the week goes by */
-  p => ({fable: cyc(p, 100, 0.93), fableT: cyc(p, 74, 0.93)}),
-  /* 05 — the whole line, every window alive at once */
-  p => ({ctx: cyc(p, 58, 0.95),
-         five: cyc(p, 64, 0.95, easeIn), fiveT: cyc(p, 72, 0.95),
-         week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED,
-         fable: 7 + cyc(p, 26, 0.95), fableT: cyc(p, 20, 0.95)}),
+  /* 04 — the Fable quota is spent long before the week is over, and only the
+     weekly reset gives it back. The blue clock runs the whole way to the end of
+     the window, then everything on that clock — Fable and 7d alike — drops to
+     zero, which is where the loop starts. */
+  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
+         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
+         week: 68 * (p / FABLE_RESET_AT),
+         weekT: 100 * (p / FABLE_RESET_AT)},
+  /* 05 — the whole line, every window alive at once. One wall clock drives every
+     blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
+     window and 2.1 points of a 7-day one. */
+  p => {
+    const fiveT = cyc(p, 72, 0.95);
+    return {ctx: CTX_FLOOR + cyc(p, 52, 0.95),
+            five: cyc(p, 64, 0.95, easeIn), fiveT,
+            week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED + fiveT * FIVE_WINDOW / WEEK_WINDOW,
+            fable: 7 + cyc(p, 26, 0.95)};
+  },
 ];
 
 /* what each crop frames, and which segment the docked line keeps lit */
