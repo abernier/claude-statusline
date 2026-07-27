@@ -106,11 +106,13 @@ a { color:inherit; }
 .sl .seg.off { opacity:.22; }
 .sl .pipe { color:var(--sep); padding:0 .85em; }
 .sl .dir { color:var(--dirc); }
-.sl .br, .sl .label, .sl .reset { color:var(--dim); }
+.sl .br, .sl .label, .sl .reset, .sl .tok { color:var(--dim); }
 /* `★ Model` is printed green, not yellow — statusline.sh:147 */
 .sl .star { color:var(--green); }
 .sl .pct { min-width:2.6em; text-align:right; }
 .sl .reset { min-width:3.9em; }
+/* right-aligned like .pct, so the `k` holds one column as the count grows */
+.sl .tok { min-width:2.6em; text-align:right; }
 /* .6em per cell is the mono advance width (theme.ts cellWidthRatio) */
 .bar { display:flex; height:1.45em; width:6em; background:var(--track); flex:0 0 auto; }
 .bar .cell { width:.6em; height:100%; display:flex; flex-direction:column; }
@@ -622,6 +624,11 @@ const fmtReset = secs => {
   if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
   return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
 };
+/* fmt_tokens() — context tokens in thousands, 1k … 999k. The page has only the
+   percentage, so the count is derived from it against a 200k window. */
+const CTX_WINDOW = 200000;
+const fmtTokens = pct =>
+  `${Math.min(999, Math.max(1, Math.round((pct / 100) * CTX_WINDOW / 1000)))}k`;
 /* the inverse of elapsed_pct() :154 — the countdown is a reading of how far into
    the window we are, so it is derived, never animated on its own */
 const remaining = (elapsedPct, windowSeconds) =>
@@ -667,13 +674,14 @@ function statusline(o = {}) {
     : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
   const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
   const reset = t => `<span class="reset">${t}</span>`;
+  const tok = v => `<span class="tok">${fmtTokens(v)}</span>`;
   const parts = [
     seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
     seg('model', `<span class="star">★</span><span>Opus 5</span>`),
-    seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}`),
+    seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
     seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
-    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.fableT, pctColor(fable))}${pct(fable, pctColor(fable))}${reset(fmtReset(remaining(s.fableT, WEEK_WINDOW)))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.fableT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
   ].filter(Boolean);
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to

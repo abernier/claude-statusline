@@ -27,6 +27,10 @@ export const BAR_CELLS = 10;
 /** Percentages are shown as integers — the script rounds before printing. */
 const pctText = (pct: number): string => `${Math.round(pct)}%`;
 
+/** fmt_tokens in statusline.sh — context tokens in thousands, 1k … 999k. */
+export const fmtTokens = (tokens: number): string =>
+  `${Math.min(999, Math.max(1, Math.round(tokens / 1000)))}k`;
+
 /**
  * Every value on the line changes while a loop plays, so each variable-width
  * field is padded to the widest string it can ever hold. Without this the cell
@@ -36,9 +40,14 @@ const pctText = (pct: number): string => `${Math.round(pct)}%`;
  */
 const PCT_CELLS = 4; // '100%'
 const RESET_CELLS = 7; // '↻6d23h' — the widest a 7-day countdown gets
+const TOKENS_CELLS = 4; // '999k'
 
 /** Right-aligned, so the digits grow leftward into the gap and the `%` never moves. */
 const pctField = (pct: number): string => pctText(pct).padStart(PCT_CELLS);
+
+/** Right-aligned too, which keeps the `k` in one column as the count grows. */
+const tokensField = (tokens: number): string =>
+  fmtTokens(tokens).padStart(TOKENS_CELLS);
 
 /** Left-aligned: the `↻` is the anchor, so it stays put as the duration shortens. */
 const resetField = (seconds: number): string =>
@@ -47,7 +56,8 @@ const resetField = (seconds: number): string =>
 const limitSegment = (
   id: 'five' | 'week' | 'fable',
   label: string,
-  window: LimitWindow
+  window: LimitWindow,
+  showReset = true
 ): Segment => {
   const pct = Math.round(window.pct);
   const color = pctColor(pct);
@@ -64,7 +74,7 @@ const limitSegment = (
         },
     {kind: 'text', text: ` ${pctField(pct)}`, color},
   ];
-  if (window.resetsIn !== undefined) {
+  if (showReset && window.resetsIn !== undefined) {
     parts.push({
       kind: 'text',
       text: ` ${resetField(window.resetsIn)}`,
@@ -102,19 +112,27 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
   if (state.ctx !== undefined) {
     const pct = Math.round(state.ctx);
     const color = ctxColor(pct);
-    segments.push(
-      segment('ctx', [
-        {kind: 'text', text: 'Ctx ', color: colors.dim},
-        {kind: 'bar', pct, width: BAR_CELLS, color},
-        {kind: 'text', text: ` ${pctField(pct)}`, color},
-      ])
-    );
+    const parts: Part[] = [
+      {kind: 'text', text: 'Ctx ', color: colors.dim},
+      {kind: 'bar', pct, width: BAR_CELLS, color},
+      {kind: 'text', text: ` ${pctField(pct)}`, color},
+    ];
+    if (state.ctxTokens !== undefined && state.ctxTokens > 0) {
+      parts.push({
+        kind: 'text',
+        text: ` ${tokensField(state.ctxTokens)}`,
+        color: colors.dim,
+      });
+    }
+    segments.push(segment('ctx', parts));
   }
 
   if (state.five) segments.push(limitSegment('five', '5h', state.five));
   if (state.week) segments.push(limitSegment('week', '7d', state.week));
+  // Fable drops the ↻ countdown: its window resets with the 7-day one, so the
+  // segment before it already shows that time.
   if (state.fable)
-    segments.push(limitSegment('fable', 'Fable', state.fable));
+    segments.push(limitSegment('fable', 'Fable', state.fable, false));
 
   return segments;
 };

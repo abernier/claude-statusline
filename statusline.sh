@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
-# Claude Code statusline: dir ⎇branch │ ★ Model │ Ctx ▓▓░ 9% │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
+# Claude Code statusline: dir ⎇branch │ ★ Model │ Ctx ▓▓░ 9% 18k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
 # Reads the statusline JSON from stdin (see https://code.claude.com/docs/en/statusline.md)
 
 input=$(cat)
 
-IFS=$'\t' read -r model dir version ctx_pct five_pct five_reset week_pct week_reset <<<"$(jq -r '[
-  (.model.display_name // "?"),
-  (.workspace.current_dir // .cwd // ""),
-  (.version // "2.1.211"),
+# Tab is an IFS whitespace character, so bash collapses a run of tabs: one
+# empty field would shift every value after it. `d` keeps the text fields
+# non-empty. A path cannot hold U+001F, so it stands in for "no directory"
+# and is cleared right after the read.
+IFS=$'\t' read -r model dir version ctx_pct ctx_tokens five_pct five_reset week_pct week_reset <<<"$(jq -r '
+def d($fallback): if (. // "") == "" then $fallback else . end;
+[
+  (.model.display_name | d("?")),
+  (.workspace.current_dir // .cwd | d("\u001f")),
+  (.version | d("2.1.211")),
   (.context_window.used_percentage // -1 | round),
+  ((.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0) | round),
   (.rate_limits.five_hour.used_percentage // -1 | round),
   (.rate_limits.five_hour.resets_at // 0),
   (.rate_limits.seven_day.used_percentage // -1 | round),
   (.rate_limits.seven_day.resets_at // 0)
 ] | @tsv' <<<"$input")"
+[[ $dir == $'\x1f' ]] && dir=""
 
 # --- Fable weekly window: not in the statusline JSON. Primary source is the
 # CLI's own persisted copy of its last successful /api/oauth/usage fetch
@@ -144,6 +152,16 @@ stacked_bar() {
   printf '%b\033[0m' "$out"
 }
 
+# fmt_tokens <count> — context tokens, always in thousands: 1k … 999k. A live
+# session is never really at 0k, so anything under 500 rounds up to 1k instead
+# of down to a 0k that reads like "nothing loaded".
+fmt_tokens() {
+  local k=$(( ($1 + 500) / 1000 ))
+  (( k < 1 )) && k=1
+  (( k > 999 )) && k=999
+  echo "${k}k"
+}
+
 # fmt_reset <epoch> — time until reset: now / 45m / 7h9m / 3d10h
 fmt_reset() {
   local diff=$(( $1 - $(date +%s) ))
@@ -167,7 +185,10 @@ fi
 segs+=("\033[38;2;140;194;74m★ ${model}${RESET}")
 
 if (( ctx_pct >= 0 )); then
-  segs+=("${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color) \033[$(ctx_color "$ctx_pct")m${ctx_pct}%${RESET}")
+  seg="${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color)"
+  seg+=" \033[$(ctx_color "$ctx_pct")m${ctx_pct}%${RESET}"
+  (( ctx_tokens > 0 )) && seg+=" ${DIM}$(fmt_tokens "$ctx_tokens")${RESET}"
+  segs+=("$seg")
 fi
 
 # elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
@@ -207,8 +228,9 @@ if (( fable_pct >= 0 )); then
   else
     seg+="$(bar "$fable_pct" 10)"
   fi
+  # No ↻ countdown here: the Fable window resets with the 7-day one, so the
+  # segment before it already shows this exact time.
   seg+=" \033[$(pct_color "$fable_pct")m${fable_pct}%${RESET}"
-  (( fable_reset > 0 )) && seg+=" ${DIM}↻$(fmt_reset "$fable_reset")${RESET}"
   segs+=("$seg")
 fi
 

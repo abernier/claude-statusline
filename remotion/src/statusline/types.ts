@@ -31,6 +31,8 @@ export type StatuslineState = {
   branch?: string;
   model?: string;
   ctx?: number;
+  /** Raw context tokens. The segment prints them in thousands. Omit to hide. */
+  ctxTokens?: number;
   five?: LimitWindow;
   week?: LimitWindow;
   fable?: LimitWindow;

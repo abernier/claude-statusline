@@ -120,10 +120,12 @@ Left to right:
 
 - **dir ⎇ branch** — the current directory's name, and the git branch you are on
 - **★ Model** — the active model's display name
-- **Ctx** — how full the context window is, 0–100%
+- **Ctx** — how full the context window is, 0–100%, and the token count in
+  thousands
 - **5h / 7d** — your 5-hour and 7-day rate-limit windows: how much you have used,
   how much of the window has gone by, and `↻` the time until it resets
-- **Fable** — the same, for Fable's own weekly quota
+- **Fable** — the same, for Fable's own weekly quota. It resets with the 7-day
+  window, so it shows no `↻` of its own
 
 ## How to read it
 

@@ -40,6 +40,13 @@ const remaining = (elapsedPct: number, windowSeconds: number): number =>
  */
 const WEEK_ELAPSED = 51;
 
+/**
+ * The token count is not a free variable either — it is the same reading as the
+ * context percentage, so it is derived from it against a 200k window.
+ */
+const CTX_WINDOW = 200000;
+const ctxTokens = (pct: number): number => Math.round((pct / 100) * CTX_WINDOW);
+
 export type Story = {
   id: string;
   /** Filename stem for the rendered asset. */
@@ -84,7 +91,10 @@ const context: Story = {
   id: 'context',
   slug: 'loop-context',
   summary: 'context filling to 78%, then compacting',
-  at: (p) => ({ctx: cyc(p, 78, 0.92, easeOut)}),
+  at: (p) => {
+    const ctx = cyc(p, 78, 0.92, easeOut);
+    return {ctx, ctxTokens: ctxTokens(ctx)};
+  },
 };
 
 /**
@@ -129,11 +139,9 @@ const fable: Story = {
   at: (p) => {
     const elapsed = cyc(p, 74, 0.93);
     return {
-      fable: {
-        pct: cyc(p, 100, 0.93),
-        elapsed,
-        resetsIn: remaining(elapsed, WEEK_WINDOW),
-      },
+      // No resetsIn: the Fable segment prints no countdown, because its window
+      // resets with the 7-day one.
+      fable: {pct: cyc(p, 100, 0.93), elapsed},
     };
   },
 };
@@ -146,8 +154,10 @@ const wholeLine: Story = {
   at: (p) => {
     const fiveElapsed = cyc(p, 72, 0.95);
     const fableElapsed = cyc(p, 20, 0.95);
+    const ctx = cyc(p, 58, 0.95);
     return {
-      ctx: cyc(p, 58, 0.95),
+      ctx,
+      ctxTokens: ctxTokens(ctx),
       five: {
         pct: cyc(p, 64, 0.95, easeIn),
         elapsed: fiveElapsed,
@@ -158,11 +168,7 @@ const wholeLine: Story = {
         elapsed: WEEK_ELAPSED,
         resetsIn: remaining(WEEK_ELAPSED, WEEK_WINDOW),
       },
-      fable: {
-        pct: 7 + cyc(p, 26, 0.95),
-        elapsed: fableElapsed,
-        resetsIn: remaining(fableElapsed, WEEK_WINDOW),
-      },
+      fable: {pct: 7 + cyc(p, 26, 0.95), elapsed: fableElapsed},
     };
   },
 };
