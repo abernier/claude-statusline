@@ -1,0 +1,992 @@
+<!doctype html>
+<!--
+  PROTOTYPE — THROWAWAY. Not linked from anywhere. Do not ship this file.
+
+  Question it answers:
+    "The stacked bar is a race between spend and clock, and it tells you when to
+     turn thinking effort up or down. What should the page, the README and the
+     rendered previews look like if that race IS the identity?"
+
+  Three variants of the landing page identity, switchable with ?variant=A|B|C,
+  hosted inside the real page frame (sidebar, Claude Code TUI, docked statusline,
+  install tail) so each one is judged at real density, not in a vacuum.
+
+    A — The race, blown up      one monumental bar, the verdict under it
+    B — The verdict board       a dial plus a scenario matrix, no hero animation
+    C — Two lanes and the gap   the bar exploded into two lanes, then collapsed
+
+  Each variant ends with a README-hero block: what the top of README.md would be
+  under that identity, and which loop remotion/ would render for it.
+
+  The engine (statusline(), bar geometry, palette) is copied from index.html,
+  which mirrors statusline.sh. Nothing here changes the script.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PROTOTYPE — the race identity</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/jetbrains-mono-latin.woff2" crossorigin>
+<style>
+@font-face {
+  font-family:'JetBrains Mono';
+  src:url('assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  font-weight:100 800; font-style:normal; font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --brand:#D97757;
+  --green:rgb(140,194,74); --yellow:rgb(220,200,60); --red:rgb(220,60,60);
+  --dim:rgb(138,138,138); --sep:rgb(55,55,55); --track:rgb(55,55,55);
+  --blue:rgb(40,80,130); --dirc:rgb(95,175,215);
+  --bg:#0d0d0d; --app:#161616; --sunk:#101010; --fg:#ededed;
+  --muted:#8f8f8f; --faint:#6e6e6e; --line:#242424; --hair:#1e1e1e;
+  --pad:clamp(26px,4.2vw,46px); --measure:780px; --tint:transparent;
+  --mono:'JetBrains Mono','DejaVu Sans Mono','Liberation Mono',ui-monospace,monospace;
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--mono);
+  font-size:14px; -webkit-font-smoothing:antialiased; }
+a { color:inherit; }
+::selection { background:var(--brand); color:#141414; }
+
+/* ============ the statusline, exactly as index.html draws it ============ */
+.sl { display:flex; align-items:center; white-space:nowrap; line-height:1.45;
+  font-variant-numeric:tabular-nums; }
+.sl .seg { display:inline-flex; align-items:center; gap:.55em; transition:opacity .45s ease; }
+.sl .seg.off { opacity:.22; }
+.sl .pipe { color:var(--sep); padding:0 .85em; }
+.sl .dir { color:var(--dirc); }
+.sl .br, .sl .label, .sl .reset, .sl .tok { color:var(--dim); }
+.sl .star { color:var(--green); }
+.sl .pct { min-width:2.6em; text-align:right; }
+.sl .reset { min-width:3.9em; }
+.sl .tok { min-width:2.6em; text-align:right; }
+.bar { display:flex; height:1.45em; width:6em; background:var(--track); flex:0 0 auto; }
+.bar .cell { width:.6em; height:100%; display:flex; flex-direction:column; }
+.bar .cell .top, .bar .cell .bot { height:50%; }
+.bar .cell .bot { position:relative; z-index:1; }
+.bar.plain { position:relative; }
+.bar.plain .fill { position:absolute; left:0; top:0; bottom:0; }
+.overshoot { box-shadow:0 0 .16em currentColor; }
+
+/* ============ the big race bar — prototype only ============ */
+.rbar { display:flex; align-items:stretch; }
+.rbar .rc { display:flex; flex-direction:column; }
+.rbar .rc .t, .rbar .rc .b { flex:1 1 50%; }
+.rbar .rc .b { position:relative; z-index:1; }
+.rbar.big .t.overshoot { box-shadow:0 0 14px currentColor; }
+
+/* ============ the Claude Code TUI ============ */
+.tui { container-type:inline-size; font-size:13px; }
+.tui-head { display:flex; gap:18px; align-items:flex-start; padding:26px var(--pad) 16px; }
+.tui-head .who .name { color:#f2f2f2; font-weight:700; }
+.tui-head .who .ver { color:#5f5f5f; margin-left:9px; font-weight:400; }
+.tui-head .who .meta, .tui-head .who .cwd { color:#a9a9a9; line-height:1.7; }
+.tui-prompt { border-top:1px solid #2b2b2b; padding:18px var(--pad); display:flex; gap:13px; color:#6a6a6a; }
+.tui-prompt .chev { color:#8a8a8a; }
+.tui-prompt .cur::after { content:'▊'; color:#8a8a8a; animation:blink 1.05s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0 } }
+/* tighter than index.html's 52/48: the prototype bar and the switcher both live
+   down here, and the hero is what is being judged */
+.tui-sl { padding:32px var(--pad) 20px; }
+.tui-mode { color:var(--brand); padding:0 var(--pad) 16px; font-size:12.5px; }
+.tui-mode span { color:var(--faint); }
+.tui-cap { color:var(--faint); font-size:.86em; padding:20px var(--pad) 0; min-height:1.5em; }
+.tui-cap::after { content:'▊'; color:#454545; animation:blink 1.05s steps(1) infinite; }
+
+.crop { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+  padding:30px 26px; margin-top:22px; container-type:inline-size; max-width:var(--measure);
+  overflow-x:auto; scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+.crop.wide { max-width:none; }
+
+/* ============ shell ============ */
+.side { position:sticky; top:0; height:100vh; border-right:1px solid var(--hair);
+  padding:34px 20px; display:flex; flex-direction:column; z-index:7; background:var(--bg); }
+.side .brand { font-size:15px; margin-bottom:4px; letter-spacing:-.01em; }
+.side .brand b { color:var(--brand); font-weight:600; }
+.side .ver { color:#565656; font-size:11px; margin-bottom:22px; }
+.side .grp { color:#4f4f4f; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  margin:0 0 10px 14px; }
+.side nav { margin-bottom:24px; }
+.side nav a { display:flex; gap:11px; text-decoration:none; color:#8a8a8a; font-size:12.5px;
+  padding:7px 14px; border-left:2px solid transparent; line-height:1.5; border-radius:0 5px 5px 0;
+  transition:color .2s ease, background-color .35s ease, border-color .35s ease; }
+.side nav a i { font-style:normal; color:#4a4a4a; font-size:11px; padding-top:1px; }
+.side nav a:hover { color:var(--fg); }
+.side nav a.on { color:var(--fg); border-left-color:var(--stepc,var(--brand));
+  background:color-mix(in srgb, var(--stepc,var(--brand)) 13%, transparent); }
+.side nav a.on i { color:var(--stepc,var(--brand)); }
+.shell { display:grid; grid-template-columns:236px minmax(0,1fr); }
+.main { height:100vh; display:flex; flex-direction:column; }
+.app { flex:1; min-height:0; min-width:0; display:flex; flex-direction:column; margin:20px 22px 0;
+  border:1px solid #2a2a2a; border-radius:11px 11px 0 0; overflow:hidden; background:var(--app); }
+.scrollarea { flex:1; min-height:0; overflow-y:auto; padding-bottom:26px;
+  scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; scroll-behavior:smooth; }
+.appfoot { border-top:1px solid var(--line); background:var(--app);
+  box-shadow:inset 3px 0 0 var(--tint); padding-bottom:46px;   /* room for the prototype bar */
+  transition:background-color .6s ease, box-shadow .6s ease; }
+.appfoot.tinted { background:color-mix(in srgb, var(--tint) 10%, var(--app)); }
+
+/* ============ page regions ============ */
+.hero, .step, .tail { padding-inline:var(--pad); }
+.hero { padding-block:34px 30px; }
+.hero .kicker { color:var(--stepc,var(--brand)); font-size:11px; letter-spacing:.22em;
+  text-transform:uppercase; margin-bottom:12px; }
+.hero h1 { font-size:clamp(26px,3.2vw,42px); font-weight:600; letter-spacing:-.028em;
+  line-height:1.15; margin:0 0 14px; max-width:20ch; }
+.hero .sub { color:var(--muted); font-size:14.5px; line-height:1.75; max-width:62ch; margin:0 0 26px; }
+.hero .after { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:18px;
+  color:var(--faint); font-size:12.5px; }
+.hero .after a { text-decoration:none; border-bottom:1px solid #333; padding-bottom:1px; }
+.hero .after a:hover { color:var(--brand); border-bottom-color:var(--brand); }
+
+.step { padding-block:6vh; --wash:8%;
+  background:linear-gradient(180deg, transparent,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 22%,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 78%, transparent); }
+.step .n { color:var(--stepc,var(--brand)); font-size:11px; letter-spacing:.22em; margin-bottom:10px; }
+.step h2 { font-size:20px; font-weight:600; margin:0 0 10px; line-height:1.3; letter-spacing:-.015em; }
+.step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0 0 10px; max-width:60ch; }
+
+/* ============ shared prototype pieces ============ */
+/* the verdict: the new signal this whole prototype is about */
+.verdict { display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+  border:1px solid var(--line); border-left:3px solid var(--vc,var(--track));
+  border-radius:10px; background:var(--sunk); padding:18px 22px;
+  transition:border-color .4s ease, background-color .4s ease; }
+.verdict .vdot { width:10px; height:10px; border-radius:99px; background:var(--vc);
+  box-shadow:0 0 12px var(--vc); flex:none; }
+.verdict .vlabel { font-size:15px; font-weight:600; color:var(--vc); letter-spacing:-.01em; }
+.verdict .vwhy { color:var(--muted); font-size:12.5px; line-height:1.6; margin-top:3px; max-width:52ch; }
+.verdict .vspacer { flex:1 1 20px; }
+.verdict .vgap { font-size:30px; font-weight:600; color:var(--vc); font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em; }
+.verdict .vgaplbl { color:var(--faint); font-size:11px; line-height:1.5; }
+.verdict .vact { display:inline-flex; align-items:center; gap:9px; border:1px solid var(--vc);
+  color:var(--vc); border-radius:99px; padding:7px 14px; font-size:12.5px; white-space:nowrap; }
+
+/* the effort dial: low / medium / high / max */
+.dial { display:flex; flex-direction:column; gap:6px; }
+.dial .rung { display:flex; align-items:center; gap:12px; padding:9px 14px; border-radius:8px;
+  border:1px solid var(--hair); background:#131313; color:#7a7a7a; font-size:13px;
+  transition:border-color .35s ease, color .35s ease, background-color .35s ease; }
+.dial .rung .kx { width:1.4em; color:#4a4a4a; font-size:11px; }
+.dial .rung.now { color:var(--fg); border-color:#3a3a3a; background:#1c1c1c; }
+.dial .rung.want { color:var(--vc); border-color:var(--vc);
+  background:color-mix(in srgb, var(--vc) 12%, #131313); }
+.dial .rung .tagx { margin-left:auto; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; }
+
+.tail { border-top:1px solid var(--hair); padding-block:48px 30px; }
+.tail h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#6b6b6b;
+  margin:0 0 8px; font-weight:600; }
+.tail .intro { color:var(--muted); font-size:14px; line-height:1.75; margin:0 0 22px; max-width:60ch; }
+.ib { border:1px solid var(--line); border-radius:10px; background:var(--sunk); overflow:hidden;
+  max-width:var(--measure); }
+.ib-head { display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:13px 18px; border-bottom:1px solid var(--hair); background:#131313; }
+.ib-lbl { color:#9d9d9d; font-size:12.5px; }
+.ib.paste { border-left:2px solid var(--brand); }
+.ib pre { margin:0; padding:16px 18px; font-family:var(--mono); font-size:12.5px; line-height:1.85;
+  color:#d2d2d2; overflow-x:auto; background:transparent; }
+.ib pre .p { color:var(--brand); }
+.req { margin:22px 0 0; color:var(--faint); font-size:12.5px; line-height:1.8; max-width:70ch; }
+.req b { color:#a9a9a9; font-weight:500; }
+
+/* README hero preview */
+.rm { border:1px dashed #333; border-radius:12px; padding:22px; margin-top:20px; background:#0b0b0b; }
+.rm .rmlbl { color:#5d5d5d; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
+  margin-bottom:16px; }
+.rm .canvas { background:#0d0d0d; border:1px solid var(--line); border-radius:8px;
+  padding:clamp(20px,3.4vw,44px); display:flex; flex-direction:column; gap:18px;
+  align-items:center; text-align:center; }
+.rm .canvas h3 { margin:0; font-size:clamp(17px,2.1vw,25px); font-weight:600; letter-spacing:-.02em; }
+.rm .canvas p { margin:0; color:var(--muted); font-size:13px; line-height:1.7; max-width:56ch; }
+.rm .note { color:var(--faint); font-size:12px; line-height:1.7; margin:14px 0 0; max-width:66ch; }
+.rm .note b { color:#a9a9a9; font-weight:500; }
+
+/* ============ variant A ============ */
+.A-track { border:1px solid var(--line); border-radius:12px; background:var(--sunk);
+  padding:clamp(20px,3vw,34px); margin-bottom:16px; overflow-x:auto; }
+.A-lanes { display:flex; align-items:center; gap:18px; min-width:min-content; }
+.A-names { display:flex; flex-direction:column; justify-content:space-between; font-size:11.5px;
+  letter-spacing:.14em; text-transform:uppercase; align-self:stretch; padding:4px 0; }
+.A-names .u { color:var(--muted); }
+.A-names .t { color:#5f86ad; }
+.A-fin { align-self:stretch; border-left:1px dashed #3a3a3a; padding-left:10px; color:#5d5d5d;
+  font-size:11px; display:flex; align-items:center; }
+.A-live { display:flex; align-items:baseline; gap:14px; margin-top:20px; color:var(--faint);
+  font-size:12px; flex-wrap:wrap; }
+.A-live b { color:#c9c9c9; font-weight:500; font-size:20px; font-variant-numeric:tabular-nums; }
+.A-term { margin-top:34px; border-top:1px solid var(--hair); padding-top:26px; }
+.A-term .cap { color:var(--faint); font-size:12.5px; margin-bottom:16px; }
+
+/* ============ variant B ============ */
+.B-panel { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(230px,.85fr); gap:26px;
+  border:1px solid var(--line); border-radius:12px; background:var(--sunk);
+  padding:clamp(20px,2.6vw,30px); align-items:center; }
+.B-panel .now { color:#5d5d5d; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
+  margin-bottom:14px; }
+.B-read { display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-top:18px;
+  color:var(--faint); font-size:12px; }
+.B-read b { font-size:22px; color:#c9c9c9; font-weight:500; font-variant-numeric:tabular-nums; }
+.B-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px;
+  margin-top:8px; }
+.B-card { border:1px solid var(--line); border-top:2px solid var(--vc); border-radius:10px;
+  background:var(--sunk); padding:20px; display:flex; flex-direction:column; gap:13px; }
+.B-card .ttl { color:var(--vc); font-size:13.5px; font-weight:600; }
+.B-card .gapn { font-size:26px; font-weight:600; color:var(--vc); font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em; }
+.B-card .gapl { color:var(--faint); font-size:11px; margin-top:-9px; }
+.B-card p { color:var(--muted); font-size:12.5px; line-height:1.7; margin:0; }
+.B-card .do { border-top:1px solid var(--hair); padding-top:13px; color:var(--vc); font-size:12.5px; }
+.B-card .do span { color:var(--faint); display:block; margin-top:4px; font-size:11.5px; }
+.B-mini { display:flex; align-items:center; gap:12px; }
+.B-mini .lbl { color:var(--dim); font-size:12px; min-width:2.2em; }
+
+/* ============ variant C ============ */
+.C-stage { border:1px solid var(--line); border-radius:12px; background:var(--sunk);
+  padding:clamp(22px,3vw,36px) clamp(18px,3vw,34px); overflow-x:auto; }
+.C-rows { --lbl:104px; min-width:min-content; }
+.C-row { display:grid; grid-template-columns:var(--lbl) max-content; align-items:center; gap:0; }
+.C-row .nm { font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; padding-right:16px; }
+.C-row.u .nm { color:var(--muted); }
+.C-row.t .nm { color:#5f86ad; }
+.C-mid { margin-left:var(--lbl); position:relative; }
+.C-mid .conn { position:absolute; top:50%; height:0; border-top:1px dashed var(--vc);
+  transition:none; }
+.C-mid .tick { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed #4a4a4a; }
+.C-mid .glab { position:absolute; top:50%; transform:translateY(-50%); font-size:12.5px;
+  color:var(--vc); white-space:nowrap; padding:2px 7px; background:var(--sunk); }
+.C-gapbig { display:flex; align-items:baseline; gap:14px; margin-top:26px; flex-wrap:wrap; }
+.C-gapbig b { font-size:clamp(34px,4.6vw,56px); font-weight:600; color:var(--vc);
+  font-variant-numeric:tabular-nums; letter-spacing:-.03em; line-height:1; }
+.C-gapbig .txt { color:var(--muted); font-size:13px; line-height:1.6; max-width:34ch; }
+.C-state { color:var(--faint); font-size:12px; margin-top:18px; min-height:1.4em; }
+
+/* ============ prototype chrome ============ */
+.protobar { position:fixed; left:50%; bottom:11px; transform:translateX(-50%); z-index:99;
+  display:flex; align-items:center; gap:3px; background:#f2f2f2; color:#111; border-radius:99px;
+  padding:5px; box-shadow:0 8px 30px rgba(0,0,0,.6); font-family:var(--mono); font-size:12px; }
+.protobar button { font-family:inherit; font-size:14px; line-height:1; cursor:pointer; border:0;
+  background:transparent; color:#111; width:28px; height:28px; border-radius:99px; }
+.protobar button:hover { background:#dcdcdc; }
+.protobar .lbl { padding:0 10px; white-space:nowrap; }
+.protobar .lbl b { font-weight:600; }
+.protobar .tag { background:#111; color:#f2f2f2; border-radius:99px; padding:4px 9px;
+  font-size:10px; letter-spacing:.14em; }
+
+@media (max-width:960px) {
+  .shell { grid-template-columns:minmax(0,1fr); }
+  .side { position:static; height:auto; border-right:0; border-bottom:1px solid var(--hair); }
+  .main { height:auto; }
+  .app { margin:12px; border-radius:11px; }
+  .B-panel { grid-template-columns:minmax(0,1fr); }
+}
+@container (max-width:640px) {
+  .tui-sl .sl { flex-wrap:wrap; white-space:normal; row-gap:12px; font-size:14px !important; }
+  .tui-sl .sl .pipe { display:none; }
+  .tui-sl .sl .seg { flex:0 0 100%; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand"><b>claude</b>-statusline</div>
+    <div class="ver">prototype · the race identity</div>
+    <div class="grp">Walkthrough</div>
+    <nav class="stepnav" id="nav"></nav>
+    <div class="grp">Reference</div>
+    <nav><a href="#install">Install</a></nav>
+  </aside>
+
+  <main class="main"><div class="app">
+    <div class="scrollarea" id="scrollarea"><div class="inner" id="inner"></div></div>
+
+    <div class="appfoot" id="pin">
+      <div class="tui">
+        <div class="tui-cap" id="cap"></div>
+        <div class="tui-prompt"><span class="chev">⟩</span><span class="cur"></span></div>
+        <div class="tui-sl"><div id="dock" aria-hidden="true"></div></div>
+        <div class="tui-mode">⏵⏵ bypass permissions on <span>(shift+tab to cycle)</span></div>
+      </div>
+    </div>
+  </div></main>
+</div>
+
+<div class="protobar">
+  <span class="tag">PROTOTYPE</span>
+  <button id="prev" title="previous variant (←)">‹</button>
+  <span class="lbl"><b id="vkey">A</b> — <span id="vname"></span></span>
+  <button id="next" title="next variant (→)">›</button>
+</div>
+
+<script>
+/* =================== engine, copied from index.html =================== */
+const CELLS = 10, CELL_EM = 0.6;
+const FIVE_WINDOW = 5 * 3600, WEEK_WINDOW = 7 * 86400, CTX_WINDOW = 1000000;
+
+const pctColor = p => p > 80 ? 'var(--red)' : p >= 50 ? 'var(--yellow)' : 'var(--green)';
+const ctxColor = p => p >= 50 ? 'var(--red)' : p >= 25 ? 'var(--yellow)' : 'var(--green)';
+
+const fmtReset = secs => {
+  const s = Math.max(0, Math.round(secs));
+  if (s <= 60) return '↻now';
+  if (s < 3600) return `↻${(s / 60) | 0}m`;
+  if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
+  return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
+};
+const fmtTokens = pct =>
+  `${Math.min(999, Math.max(1, Math.round((pct / 100) * CTX_WINDOW / 1000)))}k`;
+const remaining = (elapsedPct, w) => Math.max(0, (1 - elapsedPct / 100) * w);
+
+/* how many whole cells a percentage lights, as stacked_bar() rounds it */
+const cellsFor = v => {
+  const x = Math.max(0, Math.min(100, v));
+  let c = Math.round(x * CELLS / 100);
+  if (x > 0 && c === 0) c = 1;
+  return c;
+};
+
+function plainBar(pct, color) {
+  const eighths = Math.floor((Math.max(0, Math.min(100, pct)) * CELLS * 8) / 100);
+  return `<span class="bar plain"><span class="fill" style="width:${(eighths / 8) * CELL_EM}em;background:${color}"></span></span>`;
+}
+function stackedBar(usage, elapsed, color, glow) {
+  const uc = cellsFor(usage), tc = cellsFor(elapsed);
+  let cells = '';
+  for (let i = 0; i < CELLS; i++) {
+    const filled = i < uc, over = filled && i >= tc;
+    cells += `<span class="cell">
+      <span class="top ${glow && over ? 'overshoot' : ''}" style="background:${filled ? color : 'var(--track)'};color:${color}"></span>
+      <span class="bot" style="background:${i < tc ? 'var(--blue)' : 'var(--track)'}"></span>
+    </span>`;
+  }
+  return `<span class="bar">${cells}</span>`;
+}
+
+const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7,
+                  glow:false, only:null, focus:null, compact:false};
+
+function statusline(o = {}) {
+  const s = {...DEFAULTS, ...o};
+  const R = Math.round;
+  const ctx = R(s.ctx), five = R(s.five), week = R(s.week), fable = R(s.fable);
+  const skip = id => (s.only && s.only !== id) || (s.compact && (id === 'dir' || id === 'model'));
+  const seg = (id, inner) => skip(id) ? null
+    : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
+  const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
+  const reset = t => `<span class="reset">${t}</span>`;
+  const tok = v => `<span class="tok">${fmtTokens(v)}</span>`;
+  const parts = [
+    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
+    seg('model', `<span class="star">★</span><span>Opus 5</span>`),
+    seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
+    seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
+    seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
+  ].filter(Boolean);
+  const k = s.k ?? (s.only ? 5.4 : s.compact ? 1.0 : 1.15);
+  const cap = s.cap ?? (s.only ? 44 : s.compact ? 15 : 21);
+  return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
+}
+
+/* =================== NEW: the race and its verdict ===================
+   The whole prototype rests on one derived number: gap = spend - clock, in
+   percentage points of the window. The bar already draws it. Nothing in the
+   product names it, and nothing tells you what to do about it. */
+const GAP_HOT = 12, GAP_COOL = -12;
+
+const LEVELS = ['low', 'medium', 'high', 'max'];
+const NOW_LEVEL = 2;                       // the TUI header says "high effort"
+
+function verdict(usage, elapsed) {
+  const gap = Math.round(usage) - Math.round(elapsed);
+  if (gap >= GAP_HOT) return {
+    gap, key:'hot', color:'var(--red)', label:'Ahead of the clock',
+    why:'You are spending faster than the window is passing. Keep this pace and you hit the limit before it resets.',
+    act:'Turn thinking down', dir:-1, arrow:'↓',
+  };
+  if (gap <= GAP_COOL) return {
+    gap, key:'cool', color:'var(--green)', label:'Behind the clock',
+    why:'The window is passing faster than you are spending it. There is quota here you will lose if you do not use it.',
+    act:'Turn thinking up', dir:+1, arrow:'↑',
+  };
+  return {
+    gap, key:'pace', color:'var(--yellow)', label:'On pace',
+    why:'Spend and clock are level. The window lasts exactly as long as it should.',
+    act:'Leave the dial alone', dir:0, arrow:'=',
+  };
+}
+const signed = n => (n > 0 ? '+' : '') + n;
+const wantLevel = v => Math.max(0, Math.min(LEVELS.length - 1, NOW_LEVEL + v.dir));
+
+/* the race arc: a full sweep through behind → on pace → ahead, then the reset.
+   Deliberately different from stories.ts:01 — that one only shows the crossing,
+   this one has to make all three verdicts appear in one loop. */
+const RACE = p => {
+  if (p >= 0.92) return {five:0, fiveT:0, glow:true};   // the window turned over
+  const q = p / 0.92;
+  return {five: 100 * Math.pow(q, 2.5), fiveT: 62 * q, glow:true};
+};
+
+/* a big race bar, in pixels rather than ems, for hero use */
+function bigBar(u, t, o = {}) {
+  const {cw = 54, h = 74, gap = 3, glow = true, cls = 'big'} = o;
+  const uc = cellsFor(u), tc = cellsFor(t), col = pctColor(u);
+  let out = '';
+  for (let i = 0; i < CELLS; i++) {
+    const filled = i < uc, over = filled && i >= tc;
+    out += `<span class="rc" style="width:${cw}px;height:${h}px;margin-right:${i < CELLS - 1 ? gap : 0}px">`
+      + `<span class="t${over && glow ? ' overshoot' : ''}" style="background:${filled ? col : 'var(--track)'};color:${col}"></span>`
+      + `<span class="b" style="background:${i < tc ? 'var(--blue)' : 'var(--track)'}"></span></span>`;
+  }
+  return `<span class="rbar ${cls}">${out}</span>`;
+}
+/* one lane of the exploded race: a single row of cells, no stacking */
+function laneBar(v, color, o = {}) {
+  const {cw = 54, h = 30, gap = 3} = o;
+  const n = cellsFor(v);
+  let out = '';
+  for (let i = 0; i < CELLS; i++) {
+    out += `<span class="rc" style="width:${cw}px;height:${h}px;margin-right:${i < CELLS - 1 ? gap : 0}px">`
+      + `<span class="t" style="background:${i < n ? color : 'var(--track)'}"></span></span>`;
+  }
+  return `<span class="rbar">${out}</span>`;
+}
+
+/* =================== shared page furniture =================== */
+const PROMPT = `Install the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+  Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.`;
+
+const tail = () => `
+<section class="tail" id="install">
+  <h2>Install</h2>
+  <p class="intro">Paste one prompt into Claude Code. It installs the script, wires Claude Code up
+    to it, and checks the result.</p>
+  <div class="ib paste">
+    <div class="ib-head"><span class="ib-lbl">The prompt for Claude Code</span></div>
+    <pre><span class="p">&gt;</span> ${PROMPT}</pre>
+  </div>
+  <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. One file, MIT.</p>
+</section>`;
+
+/* =================== variant A — the race, blown up =================== */
+const A = {
+  name: 'The race, blown up',
+  hue: '#cf8a4e',
+  nav: [['a0','The two racers'], ['a1','Reading the gap'], ['a2','Turning the dial'],
+        ['a3','Three races at once']],
+  html: () => `
+  <div class="tui-head">
+    <div class="who">
+      <div><span class="name">Claude Code</span><span class="ver">v2.1.294</span></div>
+      <div class="meta">Opus 5 with high effort · Claude Max</div>
+      <div class="cwd">~/dev/projects/claude-statusline</div>
+    </div>
+  </div>
+
+  <header class="hero" style="--stepc:#cf8a4e">
+    <div class="kicker">one bar, two racers</div>
+    <h1>Are you spending faster than the clock?</h1>
+    <p class="sub">Every limit window is a race. Your tokens run along the top. The clock runs along
+      the bottom. The statusline draws both in the same ten characters, so you can see who is
+      winning without doing arithmetic. When your spend pulls ahead, think less. When it falls
+      behind, think harder.</p>
+
+    <div class="A-track">
+      <div class="A-lanes">
+        <div class="A-names"><span class="u">you</span><span class="t">the clock</span></div>
+        <div id="A-bar"></div>
+        <div class="A-fin">100%</div>
+      </div>
+      <div class="A-live">
+        <span>spent <b id="A-u">0%</b></span>
+        <span>window gone <b id="A-t">0%</b></span>
+        <span>resets in <b id="A-r">↻5h0m</b></span>
+      </div>
+    </div>
+
+    <div class="verdict" id="A-verdict">
+      <span class="vdot"></span>
+      <div>
+        <div class="vlabel" id="A-vlabel"></div>
+        <div class="vwhy" id="A-vwhy"></div>
+      </div>
+      <span class="vspacer"></span>
+      <div style="text-align:right">
+        <div class="vgap" id="A-vgap"></div>
+        <div class="vgaplbl" id="A-vgaplbl"></div>
+      </div>
+      <span class="vact" id="A-vact"></span>
+    </div>
+
+    <div class="A-term">
+      <div class="cap">And this is the same race, in your terminal, one line tall.</div>
+      <div class="crop wide"><div id="A-crop"></div></div>
+    </div>
+
+    <div class="after">
+      <span>Paste the prompt below into Claude Code.</span>
+      <a href="#install">Install</a>
+    </div>
+  </header>
+
+  <section class="step" id="a0" data-i="0" data-hue="#cf8a4e" data-cap="# the two racers"
+           style="--stepc:#cf8a4e">
+    <div class="n">01</div><h2>The two racers</h2>
+    <p>The top half of each character is how much of the window you have spent. The bottom half is
+      how much of the window has gone by. Both run left to right across the same ten cells, so the
+      one that reaches further is the one that is winning.</p>
+    <div class="crop"><div id="A-c0"></div></div>
+  </section>
+
+  <section class="step" id="a1" data-i="1" data-hue="#c0564e" data-cap="# the gap is the signal"
+           style="--stepc:#c0564e">
+    <div class="n">02</div><h2>Reading the gap</h2>
+    <p>The distance between the two is the whole message. Green top sticking out past blue means you
+      are burning the window early. Blue sticking out past green means you are leaving quota on the
+      table. Level means the window will last exactly as long as it should.</p>
+    <div class="crop"><div id="A-c1"></div></div>
+  </section>
+
+  <section class="step" id="a2" data-i="2" data-hue="#6ea85c" data-cap="# /model → effort"
+           style="--stepc:#6ea85c">
+    <div class="n">03</div><h2>Turning the dial</h2>
+    <p>The gap is an instruction. Ahead of the clock, drop an effort level and the spend rate falls
+      with it. Behind the clock, raise one and get harder thinking for quota you were going to
+      lose anyway.</p>
+    <div style="max-width:420px;margin-top:18px" id="A-dial"></div>
+  </section>
+
+  <section class="step" style="--stepc:#5891bd" id="a3" data-i="3" data-hue="#5891bd"
+           data-cap="# ctx, 5h, 7d, Fable">
+    <div class="n">04</div><h2>Three races at once</h2>
+    <p>Your 5-hour window, your 7-day window and Fable's weekly quota each run their own race. The
+      context bar is not a race — it has no clock — so it stays a plain bar.</p>
+    <div class="crop wide"><div id="A-c3"></div></div>
+    <div class="rm">
+      <div class="rmlbl">README hero, variant A</div>
+      <div class="canvas">
+        <h3>Are you spending faster than the clock?</h3>
+        <div id="A-rm"></div>
+        <p>One bash script. Every limit window drawn as a race between your tokens and your time,
+          under the prompt, while you work.</p>
+      </div>
+      <p class="note"><b>Rendered preview:</b> replaces <code>loop-whole-line.gif</code> at the top
+        of the README with one loop of the big bar — spend crossing the clock, the overshoot
+        glowing. The current whole-line loop moves down to "What it shows".</p>
+    </div>
+  </section>
+  ${tail()}`,
+
+  paint(p) {
+    const s = RACE(p);
+    const v = verdict(s.five, s.fiveT);
+    const set = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
+    set('A-bar', bigBar(s.five, s.fiveT, {cw:54, h:74}));
+    set('A-u', Math.round(s.five) + '%');
+    set('A-t', Math.round(s.fiveT) + '%');
+    set('A-r', fmtReset(remaining(s.fiveT, FIVE_WINDOW)));
+    const box = document.getElementById('A-verdict');
+    if (box) box.style.setProperty('--vc', v.color);
+    set('A-vlabel', v.label);
+    set('A-vwhy', v.why);
+    set('A-vgap', signed(v.gap));
+    set('A-vgaplbl', `points<br>${v.gap >= 0 ? 'ahead of' : 'behind'} the clock`);
+    set('A-vact', `${v.arrow}&nbsp; ${v.act}`);
+    set('A-crop', statusline({compact:true, k:1.35, cap:18, ...s}));
+    set('A-c0', statusline({only:'five', ...s}));
+    set('A-c1', statusline({only:'five', ...s}));
+    set('A-c3', statusline({compact:true, k:1.35, cap:18, ctx:19 + 30 * p, week:16, weekT:51,
+                            fable:7 + 20 * p, five:s.five, fiveT:s.fiveT}));
+    set('A-rm', bigBar(s.five, s.fiveT, {cw:38, h:54}));
+    set('A-dial', dialHTML(v));
+  },
+};
+
+/* the effort dial, shared by A and B */
+function dialHTML(v) {
+  const want = wantLevel(v);
+  const rows = LEVELS.map((l, i) => {
+    const cls = i === NOW_LEVEL ? 'now' : '';
+    const wcls = (i === want && want !== NOW_LEVEL) ? ' want' : '';
+    const tag = i === NOW_LEVEL ? 'now' : (i === want && want !== NOW_LEVEL ? 'go here' : '');
+    return `<div class="rung ${cls}${wcls}"><span class="kx">${i + 1}</span><span>${l} effort</span>
+      <span class="tagx">${tag}</span></div>`;
+  }).join('');
+  return `<div class="dial" style="--vc:${v.color}">${rows}</div>`;
+}
+
+/* =================== variant B — the verdict board =================== */
+const SCENARIOS = [
+  {u:14, t:46, blurb:'Two hours into a five-hour window and you have barely touched it. Reading code, writing docs, waiting on CI.'},
+  {u:49, t:52, blurb:'Normal work. The bar and the clock are within a few points of each other and stay there.'},
+  {u:81, t:44, blurb:'A long agent run at max effort. Half the window is gone and four fifths of the quota with it.'},
+];
+
+const B = {
+  name: 'The verdict board',
+  hue: '#8f79c0',
+  nav: [['b0','Three states'], ['b1','What the bar is'], ['b2','The other windows']],
+  html: () => `
+  <div class="tui-head">
+    <div class="who">
+      <div><span class="name">Claude Code</span><span class="ver">v2.1.294</span></div>
+      <div class="meta">Opus 5 with high effort · Claude Max</div>
+      <div class="cwd">~/dev/projects/claude-statusline</div>
+    </div>
+  </div>
+
+  <header class="hero" style="--stepc:#8f79c0">
+    <div class="kicker">spend vs clock → effort</div>
+    <h1>It tells you which way to turn the dial.</h1>
+    <p class="sub">The bar under your prompt holds two numbers: how much of the window you have
+      spent, and how much of it has passed. The difference between them is the only thing you have
+      to read, and it always means the same thing — raise the effort level, leave it, or drop it.</p>
+
+    <div class="B-panel" id="B-panel">
+      <div>
+        <div class="now">right now · 5-hour window</div>
+        <div class="B-mini"><span class="lbl">5h</span><div id="B-bar"></div></div>
+        <div class="B-read">
+          <span>spent <b id="B-u">0%</b></span>
+          <span>window gone <b id="B-t">0%</b></span>
+          <span>gap <b id="B-g">+0</b></span>
+        </div>
+        <div class="verdict" id="B-verdict" style="margin-top:20px;border-left-width:3px">
+          <span class="vdot"></span>
+          <div>
+            <div class="vlabel" id="B-vlabel"></div>
+            <div class="vwhy" id="B-vwhy"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="now">thinking effort</div>
+        <div id="B-dial"></div>
+      </div>
+    </div>
+
+    <div class="after"><span>Paste the prompt below into Claude Code.</span>
+      <a href="#install">Install</a></div>
+  </header>
+
+  <section class="step" id="b0" data-i="0" data-hue="#8f79c0" data-cap="# three states, one bar"
+           style="--stepc:#8f79c0">
+    <div class="n">01</div><h2>Three states</h2>
+    <p>There are only three things the bar can be telling you. Every one of them has one action.</p>
+    <div class="B-grid" id="B-grid" style="margin-top:20px"></div>
+  </section>
+
+  <section class="step" id="b1" data-i="1" data-hue="#cf8a4e" data-cap="# top half, bottom half"
+           style="--stepc:#cf8a4e">
+    <div class="n">02</div><h2>What the bar is</h2>
+    <p>Ten characters. The top half of each is your spend, coloured green, yellow or red by how much
+      is left. The bottom half is the window's own clock, in blue. Nothing else on the line moves
+      on two axes like this.</p>
+    <div class="crop"><div id="B-c1"></div></div>
+  </section>
+
+  <section class="step" id="b2" data-i="2" data-hue="#5891bd" data-cap="# ctx, 5h, 7d, Fable"
+           style="--stepc:#5891bd">
+    <div class="n">03</div><h2>The other windows</h2>
+    <p>Your 7-day window and Fable's weekly quota run the same race on a longer clock. The context
+      bar has no clock to race, so it stays a plain bar and turns red early.</p>
+    <div class="crop wide"><div id="B-c2"></div></div>
+    <div class="rm">
+      <div class="rmlbl">README hero, variant B</div>
+      <div class="canvas">
+        <h3>Your limit bar, read as an instruction</h3>
+        <div id="B-rm" style="width:100%"></div>
+        <p>One bash script. It shows how much of each window you have spent against how much of it
+          has passed — and therefore whether to think harder or think less.</p>
+      </div>
+      <p class="note"><b>Rendered preview:</b> a still, not a loop. Three frames side by side, one
+        per state, each captioned with its action. Reads correctly on GitHub with motion off, which
+        the current GIF-first README does not.</p>
+    </div>
+  </section>
+  ${tail()}`,
+
+  paint(p) {
+    const s = RACE(p);
+    const v = verdict(s.five, s.fiveT);
+    const set = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
+    set('B-bar', bigBar(s.five, s.fiveT, {cw:34, h:46}));
+    set('B-u', Math.round(s.five) + '%');
+    set('B-t', Math.round(s.fiveT) + '%');
+    set('B-g', signed(v.gap));
+    const box = document.getElementById('B-verdict');
+    if (box) box.style.setProperty('--vc', v.color);
+    set('B-vlabel', v.label);
+    set('B-vwhy', v.why);
+    set('B-dial', dialHTML(v));
+    set('B-c1', statusline({only:'five', ...s}));
+    set('B-c2', statusline({compact:true, k:1.35, cap:18, ctx:19 + 30 * p, week:16, weekT:51,
+                            fable:7 + 20 * p, five:s.five, fiveT:s.fiveT}));
+  },
+
+  /* the scenario grid and the README strip are frozen — they are a matrix, not
+     an animation, which is the point of this variant */
+  once() {
+    const card = sc => {
+      const v = verdict(sc.u, sc.t);
+      return `<div class="B-card" style="--vc:${v.color}">
+        <div class="ttl">${v.label}</div>
+        <div class="B-mini"><span class="lbl">5h</span>${stackedBarEm(sc.u, sc.t)}</div>
+        <div class="gapn">${signed(v.gap)}</div>
+        <div class="gapl">points ${v.gap >= 0 ? 'ahead of' : 'behind'} the clock</div>
+        <p>${sc.blurb}</p>
+        <div class="do">${v.arrow} ${v.act}<span>${v.dir === 0 ? `stay at ${LEVELS[NOW_LEVEL]}`
+          : `${LEVELS[NOW_LEVEL]} → ${LEVELS[wantLevel(v)]}`}</span></div>
+      </div>`;
+    };
+    const grid = document.getElementById('B-grid');
+    if (grid) grid.innerHTML = SCENARIOS.map(card).join('');
+    const rm = document.getElementById('B-rm');
+    if (rm) rm.innerHTML = `<div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">`
+      + SCENARIOS.map(sc => {
+          const v = verdict(sc.u, sc.t);
+          return `<div style="--vc:${v.color};text-align:center">
+            ${bigBar(sc.u, sc.t, {cw:22, h:32})}
+            <div style="color:var(--vc);font-size:12px;margin-top:9px">${v.arrow} ${v.act}</div></div>`;
+        }).join('') + `</div>`;
+  },
+};
+/* an em-sized stacked bar for the cards, so they read as terminal output */
+const stackedBarEm = (u, t) =>
+  `<span style="font-size:19px;display:inline-flex">${stackedBar(u, t, pctColor(u), true)}</span>`;
+
+/* =================== variant C — two lanes and the gap =================== */
+const C_CW = 52, C_GAP = 3, C_SPLIT = 46;
+const C_TRACK = CELLS * C_CW + (CELLS - 1) * C_GAP;
+
+const C = {
+  name: 'Two lanes and the gap',
+  hue: '#5891bd',
+  nav: [['c0','Why it is one bar'], ['c1','The gap is the instruction'], ['c2','On the line']],
+  html: () => `
+  <div class="tui-head">
+    <div class="who">
+      <div><span class="name">Claude Code</span><span class="ver">v2.1.294</span></div>
+      <div class="meta">Opus 5 with high effort · Claude Max</div>
+      <div class="cwd">~/dev/projects/claude-statusline</div>
+    </div>
+  </div>
+
+  <header class="hero" style="--stepc:#5891bd">
+    <div class="kicker">two lanes, ten characters</div>
+    <h1>Your spend and your clock, racing.</h1>
+    <p class="sub">Pull the bar apart and it is two lanes. One is how much of the window you have
+      spent. One is how much of it has passed. The number that matters is the distance between
+      them. Then the lanes slide back together, and that is the bar under your prompt.</p>
+
+    <div class="C-stage">
+      <div class="C-rows" id="C-rows">
+        <div class="C-row u"><span class="nm">your spend</span><span id="C-lu"></span></div>
+        <div class="C-mid" id="C-mid" style="height:${C_SPLIT}px"></div>
+        <div class="C-row t"><span class="nm">the clock</span><span id="C-lt"></span></div>
+      </div>
+      <div class="C-gapbig" id="C-gapbig">
+        <b id="C-gapn">+0</b>
+        <div class="txt"><span id="C-gaptxt"></span></div>
+      </div>
+      <div class="C-state" id="C-state"></div>
+    </div>
+
+    <div class="after"><span>Paste the prompt below into Claude Code.</span>
+      <a href="#install">Install</a></div>
+  </header>
+
+  <section class="step" id="c0" data-i="0" data-hue="#5891bd" data-cap="# collapsed: one line tall"
+           style="--stepc:#5891bd">
+    <div class="n">01</div><h2>Why it is one bar</h2>
+    <p>A terminal gives a statusline one row. Two lanes will not fit, so the bar puts the spend in
+      the top half of each character and the clock in the bottom half. Same race, half the height,
+      no arithmetic.</p>
+    <div class="crop"><div id="C-c0"></div></div>
+  </section>
+
+  <section class="step" id="c1" data-i="1" data-hue="#c0564e" data-cap="# gap → effort"
+           style="--stepc:#c0564e">
+    <div class="n">02</div><h2>The gap is the instruction</h2>
+    <p>Ahead of the clock by more than ten points and you will hit the limit before it resets — drop
+      an effort level. Behind it by more than ten and you are going to lose quota you never spent —
+      raise one.</p>
+    <div style="max-width:420px;margin-top:18px" id="C-dial"></div>
+  </section>
+
+  <section class="step" id="c2" data-i="2" data-hue="#6ea85c" data-cap="# ctx, 5h, 7d, Fable"
+           style="--stepc:#6ea85c">
+    <div class="n">03</div><h2>On the line</h2>
+    <p>Three windows, three races: 5-hour, 7-day, and Fable's own weekly quota. The context bar has
+      no clock, so it stays flat.</p>
+    <div class="crop wide"><div id="C-c2"></div></div>
+    <div class="rm">
+      <div class="rmlbl">README hero, variant C</div>
+      <div class="canvas">
+        <h3>Two lanes, ten characters</h3>
+        <div id="C-rm"></div>
+        <p>One bash script. Your spend against your clock, in every limit window, under the prompt
+          while you work.</p>
+      </div>
+      <p class="note"><b>Rendered preview:</b> the strongest remotion candidate — the explode and
+        collapse is a motion idea, so it earns the GIF. Loop: lanes apart with the gap counting,
+        lanes slam together, statusline revealed underneath.</p>
+    </div>
+  </section>
+  ${tail()}`,
+
+  paint(p) {
+    const s = RACE(p);
+    const v = verdict(s.five, s.fiveT);
+    const set = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
+    /* the collapse: exploded for most of the loop, then the lanes slam together
+       for the last quarter and the two rows become the stacked bar */
+    const COLLAPSE_AT = 0.72;
+    const closed = p < COLLAPSE_AT ? 0 : Math.min(1, (p - COLLAPSE_AT) / 0.16);
+    const split = C_SPLIT * (1 - closed);
+
+    set('C-lu', laneBar(s.five, pctColor(s.five), {cw:C_CW, h:32, gap:C_GAP}));
+    set('C-lt', laneBar(s.fiveT, 'var(--blue)', {cw:C_CW, h:32, gap:C_GAP}));
+
+    const mid = document.getElementById('C-mid');
+    if (mid) {
+      mid.style.height = split.toFixed(1) + 'px';
+      mid.style.setProperty('--vc', v.color);
+      /* the lane fills snap to whole cells, as the terminal forces. The markers
+         do not — they sit where the racers actually are, so the connector still
+         has width when both lanes happen to round to the same cell. */
+      const xu = C_TRACK * Math.max(0, Math.min(100, s.five)) / 100;
+      const xt = C_TRACK * Math.max(0, Math.min(100, s.fiveT)) / 100;
+      const lo = Math.min(xu, xt), hi = Math.max(xu, xt);
+      mid.innerHTML = closed > 0.35 ? '' : `
+        <span class="tick" style="left:${xu}px"></span>
+        <span class="tick" style="left:${xt}px"></span>
+        <span class="conn" style="left:${lo}px;width:${hi - lo}px"></span>
+        <span class="glab" style="left:${(lo + hi) / 2}px;transform:translate(-50%,-50%)">${signed(v.gap)}</span>`;
+      mid.style.opacity = String(1 - closed);
+    }
+    const big = document.getElementById('C-gapbig');
+    if (big) big.style.setProperty('--vc', v.color);
+    set('C-gapn', signed(v.gap));
+    set('C-gaptxt', `points ${v.gap >= 0 ? 'ahead of' : 'behind'} the clock — ${v.act.toLowerCase()}`);
+    set('C-state', closed > 0.5
+      ? 'collapsed — this is exactly the bar in your terminal'
+      : 'pulled apart, so you can see there are two of them');
+    set('C-c0', statusline({only:'five', ...s}));
+    set('C-c2', statusline({compact:true, k:1.35, cap:18, ctx:19 + 30 * p, week:16, weekT:51,
+                            fable:7 + 20 * p, five:s.five, fiveT:s.fiveT}));
+    set('C-dial', dialHTML(v));
+    set('C-rm', `<div style="display:flex;flex-direction:column;gap:${(split * 0.5).toFixed(1)}px">
+        ${laneBar(s.five, pctColor(s.five), {cw:34, h:22, gap:2})}
+        ${laneBar(s.fiveT, 'var(--blue)', {cw:34, h:22, gap:2})}</div>`);
+  },
+};
+
+/* =================== switcher and ticker =================== */
+const V = {A, B, C};
+const KEYS = Object.keys(V);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PERIOD = 9000, STILL = 0.62;
+
+const inner = document.getElementById('inner');
+const navEl = document.getElementById('nav');
+const scroller = document.getElementById('scrollarea');
+const dock = document.getElementById('dock');
+const cap = document.getElementById('cap');
+const pin = document.getElementById('pin');
+
+let key = (new URLSearchParams(location.search).get('variant') || 'A').toUpperCase();
+if (!V[key]) key = 'A';
+let cur = V[key], active = 0, steps = [], navLinks = [], io = null;
+
+function mount() {
+  cur = V[key];
+  document.getElementById('vkey').textContent = key;
+  document.getElementById('vname').textContent = cur.name;
+  inner.innerHTML = cur.html();
+  navEl.innerHTML = cur.nav
+    .map(([id, label], i) => `<a href="#${id}" data-step="${i}"><i>0${i + 1}</i>${label}</a>`).join('');
+  cur.once?.();
+
+  steps = [...inner.querySelectorAll('.step')];
+  navLinks = [...navEl.querySelectorAll('[data-step]')];
+  active = 0;
+  io?.disconnect();
+  io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    active = +e.target.dataset.i;
+    navLinks.forEach(a => a.classList.toggle('on', +a.dataset.step === active));
+    const on = navEl.querySelector('a.on');
+    if (on) on.style.setProperty('--stepc', e.target.dataset.hue);
+    pin.style.setProperty('--tint', e.target.dataset.hue);
+  }), {root: scroller, rootMargin: '-42% 0px -42% 0px'});
+  steps.forEach(s => io.observe(s));
+
+  navEl.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', ev => {
+    const t = inner.querySelector(a.getAttribute('href'));
+    if (!t) return;
+    ev.preventDefault();
+    t.scrollIntoView({behavior: REDUCED ? 'auto' : 'smooth', block:'center'});
+  }));
+
+  pin.style.setProperty('--tint', cur.hue);
+  pin.classList.add('tinted');
+  paint(STILL);
+  /* the sections are injected by JS, so a #fragment in the URL cannot resolve on
+     load. Resolve it here instead — it makes a deep link to one section work. */
+  const target = location.hash && inner.querySelector(location.hash);
+  if (target) target.scrollIntoView({behavior:'auto', block:'start'});
+  else scroller.scrollTop = 0;
+}
+
+function paint(p) {
+  cur.paint(p);
+  const s = RACE(p);
+  const v = verdict(s.five, s.fiveT);
+  dock.innerHTML = statusline({compact:true, focus:'five', ...s});
+  cap.textContent = `# ${v.label.toLowerCase()} — ${v.act.toLowerCase()}`;
+}
+
+function go(step) {
+  key = KEYS[(KEYS.indexOf(key) + step + KEYS.length) % KEYS.length];
+  const u = new URL(location.href);
+  u.searchParams.set('variant', key);
+  history.replaceState(null, '', u);
+  mount();
+}
+document.getElementById('prev').addEventListener('click', () => go(-1));
+document.getElementById('next').addEventListener('click', () => go(1));
+addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+
+mount();
+if (!REDUCED) {
+  let acc = 0, prev = performance.now();
+  const tick = now => {
+    requestAnimationFrame(tick);
+    acc += now - prev; prev = now;
+    if (acc < 66) return;          // ~15fps, the same time-lapse cadence as the real page
+    acc = 0;
+    paint((now % PERIOD) / PERIOD);
+  };
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>
