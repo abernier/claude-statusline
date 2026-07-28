@@ -2,7 +2,7 @@
 
 # claude-statusline
 
-## dir ⎇branch · ★ Model · Ctx · 5h · 7d · Fable — at a glance
+## Are you spending faster than the clock?
 
 [![Stars, Forks, Open Issues and License](https://shieldcn.dev/group/github/stars/alp82/claude-statusline+github/forks/alp82/claude-statusline+github/open-issues/alp82/claude-statusline+github/license/alp82/claude-statusline.svg?variant=secondary)](https://github.com/alp82/claude-statusline)
 
@@ -12,9 +12,11 @@
 
 <br>
 
-One bash script. It shows your folder and branch, the active model, how full the
-context window is, and how much of your 5-hour, 7-day and Fable limits you have
-used — as bars, under the prompt, while you work.
+One bash script. Every limit window is a race between two things: the tokens you
+spend, and the time you have left. The bar draws both. When your spend pulls
+ahead of the clock, drop an effort level. When it falls behind, you can afford to
+think harder. Your folder, branch, model and context window sit on the same line,
+under the prompt, while you work.
 
 <br>
 
@@ -123,7 +125,8 @@ Left to right:
 - **Ctx** — how full the context window is, 0–100%, and the token count in
   thousands
 - **5h / 7d** — your 5-hour and 7-day rate-limit windows: how much you have used,
-  how much of the window has gone by, and `↻` the time until it resets
+  how much of the window has gone by, and `↻` the time until it resets. The
+  distance between the two halves is the number to read
 - **Fable** — the same, for Fable's own weekly quota. It resets with the 7-day
   window, so it shows no `↻` of its own
 
@@ -131,12 +134,18 @@ Left to right:
 
 ### Usage against time
 
-![The 5h bar: usage climbing past the blue elapsed-time half, the overshoot glowing.](docs/assets/loop-burn.gif)
+![The 5h bar: spend climbing past the blue elapsed-time half at high effort, then flattening once the effort drops.](docs/assets/loop-burn.gif)
 
 The top half of each cell is how much of the window you have used. The bottom
-half is how much of the window has gone by. If the top reaches further right
-than the bottom, you are using it faster than the clock, and you will run out
-before it resets.
+half is how much of the window has gone by. The distance between the two is the
+number to read.
+
+If the top reaches further right than the bottom, you are spending faster than
+the clock and you will run out before the window resets. Drop an effort level and
+the spend rate falls with it, which is what the loop above shows: high effort
+until the gap opens, then low, and the clock catches back up. If the bottom
+reaches further right, you are leaving quota you will not get back, so you can
+afford to think harder.
 
 Colour follows usage: green under 50%, yellow 50–80%, red above 80%.
 

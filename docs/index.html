@@ -145,7 +145,7 @@ a { color:inherit; }
 /* the zoomed loop under each section. It scrolls inside its own box rather than
    bursting the layout: below ~640px the line is wider than any phone, and the
    font-size clamp bottoms out at 9px long before it would fit. */
-.crop { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+.crop { position:relative; border:1px solid var(--line); border-radius:10px; background:var(--sunk);
   padding:30px 26px; margin-top:22px; container-type:inline-size; max-width:var(--measure);
   overflow-x:auto; scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
 /* the whole-line loop is 109 cells wide — held to --measure it would render
@@ -153,6 +153,48 @@ a { color:inherit; }
 .crop.wide { max-width:none; }
 /* the rendered loop, shown only when there is no JS to drive the live one */
 noscript img { display:block; width:100%; height:auto; }
+
+/* ================= the annotation =================
+   A crop that holds a race gets its racers named and the distance between them
+   read out. That distance is the number the whole page is about, and the bar
+   alone never says it in words. The marks need room the bare crop does not
+   have, so an annotated crop is taller. `.deep` also carries the effort row. */
+.crop.annotated { padding-block:66px 80px; }
+.crop.annotated.deep { padding-block:66px 124px; }
+/* the layer is measured onto the bar the page has just painted, so it is
+   absolutely positioned over the whole crop and never in the flow */
+.ann { position:absolute; inset:0; pointer-events:none; font-size:11.5px; }
+.ann .lane { position:absolute; letter-spacing:.14em; text-transform:uppercase;
+  white-space:nowrap; transform:translateY(-50%); }
+.ann .lane.spend { color:var(--dim); }
+.ann .lane.clock { color:#5f86ad; }
+/* where each racer actually is, and the span between the two */
+.ann .edge { position:absolute; width:0; border-left:1px dashed #555; }
+.ann .span { position:absolute; height:0; border-top:1px dashed var(--gap-color); }
+/* the reading sits past the right-hand edge mark, so it never runs off the left
+   of the crop while both racers are still near zero */
+.ann .read { position:absolute; transform:translate(0,-50%); color:var(--gap-color);
+  padding-left:9px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+/* the effort row: one cell per tenth of the window, coloured by the effort
+   level in force while the clock crossed it. No flex gap — the row has to be
+   exactly as wide as the bar and land on the bar's ten cells, or the record
+   does not line up with the thing it is a record of. */
+.ann .effort { position:absolute; display:flex; }
+.ann .effort i { display:block; height:100%; box-sizing:border-box;
+  border-right:2px solid var(--sunk); }
+.ann .effort i:last-child { border-right:0; }
+.ann .effort i.high { background:var(--brand); }
+.ann .effort i.low { background:#6f6f6f; }
+/* the clock has not crossed these tenths yet, so there is no effort to record */
+.ann .effort i.none { background:rgba(255,255,255,.055); }
+/* each run names itself under its own cells, so the switch is where one label
+   stops and the other starts. The row's own name goes at its right-hand end:
+   on the left it sits on top of the reading for half of every loop. */
+.ann .run { position:absolute; transform:translate(0,-50%); white-space:nowrap;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--brand); }
+.ann .run.low { color:#8a8a8a; }
+.ann .run.name { padding-left:11px; }
 
 /* ================= controls ================= */
 /* one size and one job: every button on the page copies something, and each one
@@ -319,6 +361,13 @@ noscript img { display:block; width:100%; height:auto; }
   .step, .js .step { min-height:0; padding-block:52px; opacity:1; --wash:9%; }
   .tui-sl { padding-block:36px 32px; }
 }
+/* Below this the crop is narrower than the annotation needs. The bar keeps
+   shrinking with the container, the labels do not, and they would sit on top of
+   one another — so drop the layer and give the crop its plain height back. */
+@media (max-width:560px) {
+  .ann { display:none; }
+  .crop.annotated, .crop.annotated.deep { padding-block:30px; }
+}
 @media (prefers-reduced-motion: reduce) {
   html, .scrollarea { scroll-behavior:auto; }
   *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important;
@@ -403,13 +452,19 @@ noscript img { display:block; width:100%; height:auto; }
         </header>
 
         <section class="step" id="s0" data-i="0" data-hue="#cf8a4e"
-                 data-cap="# used more than time passed" style="--stepc:#cf8a4e">
+                 data-cap="# high effort — spending faster than the clock"
+                 data-cap-low="# low effort — the clock is catching up"
+                 data-cap-reset="# the window resets" style="--stepc:#cf8a4e">
           <div class="n">01</div>
           <h2>Usage against time</h2>
           <p>The top half of each cell is how much of the window you have used. The bottom half is
-            how much of the window has gone by. If the top reaches further right than the bottom,
-            you are using it faster than the clock, and you will run out before it resets.</p>
-          <div class="crop">
+            how much of the window has gone by. The distance between the two is the number to read.
+            Spend ahead of the clock and you run out before it resets, so drop an effort level.
+            Spend behind it and you can afford to think harder.</p>
+          <p>The row underneath is the record: which effort level you were on across each tenth of
+            the window. Here it runs high, crosses the clock, then drops to low and the clock
+            catches back up.</p>
+          <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
             <noscript><img src="assets/loop-burn.gif" width="1000" height="200"
               alt="The 5h bar: usage climbing past the blue elapsed-time half, the overshoot glowing."></noscript>
@@ -436,7 +491,7 @@ noscript img { display:block; width:100%; height:auto; }
           <h2>When a window resets</h2>
           <p>At the end of a 5-hour window both halves drop back to zero, the colour goes back to
             green, and the countdown starts again at 5h0m.</p>
-          <div class="crop">
+          <div class="crop annotated">
             <div class="slh" data-crop="2" aria-hidden="true"></div>
             <noscript><img src="assets/loop-reset.gif" width="1000" height="200"
               alt="The 5h bar creeping up, dropping to zero the instant the window resets, then climbing back."></noscript>
@@ -452,7 +507,7 @@ noscript img { display:block; width:100%; height:auto; }
             The window resets with the 7-day one, which is why it shows no ↻ of its own.</p>
           <p>Claude Code does not send this one. The script reads it from ~/.claude.json and only
             asks the API for a fresh value in the background, at most every ten minutes.</p>
-          <div class="crop">
+          <div class="crop annotated">
             <div class="slh" data-crop="3" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="200"
               alt="The Fable bar at 100%, holding while the blue week-elapsed half runs to the reset."></noscript>
@@ -715,10 +770,33 @@ const CTX_FLOOR = 6;
 /* 04's two beats: the quota is spent, then the weekly window turns over */
 const FABLE_SPENT_AT = 0.42, FABLE_RESET_AT = 0.9;
 
+/* 01's two phases. One 5-hour window: the clock runs at a constant rate,
+   because clocks do. Spend accelerates while the effort is high, crosses the
+   clock, then flattens the moment the effort drops, and the clock closes the
+   gap back up. The window turns over at the end, which is what makes it loop.
+   These five numbers also fix where the effort row's colours change, so they
+   are read from here and never written down twice. */
+const EFFORT_SWITCH = 0.42;   // where in the loop the effort drops
+const RUN_END = 0.94;         // where the window turns over
+const CLOCK_END = 96;         // how far the clock gets before it does
+const U_SWITCH = 70;          // spend at the moment of the switch
+const U_END = 92;             // spend when the window turns over
+/* the clock reading at the moment the effort dropped */
+const T_SWITCH = CLOCK_END * (EFFORT_SWITCH / RUN_END);
+
 const STORIES = [
-  /* 01 — the clock opens quickly and flattens; usage starts gently and
-     accelerates, so the crossing itself is the event */
-  p => ({five: cyc(p, 100, 0.9, q => q ** 1.5), fiveT: cyc(p, 62, 0.9, easeOut), glow: true}),
+  /* 01 — high effort until the gap opens, then low, and the clock catches up */
+  p => {
+    if (p >= RUN_END) return {five: 0, fiveT: 0, glow: true, effort: 'reset'};
+    const q = p / EFFORT_SWITCH;
+    return {
+      five: p < EFFORT_SWITCH ? U_SWITCH * q ** 1.4
+        : U_SWITCH + (U_END - U_SWITCH) * ((p - EFFORT_SWITCH) / (RUN_END - EFFORT_SWITCH)),
+      fiveT: CLOCK_END * (p / RUN_END),
+      glow: true,
+      effort: p < EFFORT_SWITCH ? 'high' : 'low',
+    };
+  },
   /* 02 — the context window fills, then compacts back to the summary */
   p => ({ctx: CTX_FLOOR + cyc(p, 78 - CTX_FLOOR, 0.92, easeOut)}),
   /* 03 — creep, then an instant drop to zero, held a beat, then the climb back */
@@ -830,12 +908,101 @@ document.querySelectorAll('.side nav a[href^="#"]').forEach(a => a.addEventListe
   target.scrollIntoView({behavior: REDUCED ? 'auto' : 'smooth', block: 'center'});
 }));
 
+/* ================= the annotation =================
+   A crop that holds a race gets its two racers named, each one marked where it
+   actually is, and the distance between them read out. That distance is the
+   number the page is about — the bar draws it and never says it. */
+const GAP_HOT = 12, GAP_COOL = -12;
+const verdict = g =>
+  g >= GAP_HOT  ? {c: 'var(--red)',    word: 'ahead of the clock'} :
+  g <= GAP_COOL ? {c: 'var(--green)',  word: 'behind the clock'} :
+                  {c: 'var(--yellow)', word: 'level with the clock'};
+const signed = n => (n > 0 ? '+' : '') + n;
+/* which pair of numbers a crop is racing. The context bar has no clock to race,
+   so it is not annotated at all. */
+const racers = (only, s) =>
+  only === 'five' ? [s.five, s.fiveT] : only === 'fable' ? [s.fable, s.weekT] : null;
+
+/* one layer per annotated crop, made once and repainted every frame */
+const anns = crops.map(holder => {
+  const crop = holder.closest('.crop');
+  if (!crop || !crop.classList.contains('annotated')) return null;
+  const layer = document.createElement('div');
+  layer.className = 'ann';
+  crop.appendChild(layer);
+  return {layer, crop};
+});
+
+/* Measure the bar the page has just painted, in the crop's own content
+   coordinates — a narrow crop scrolls sideways and the layer scrolls with it.
+   Every mark is placed against this rectangle, so the annotation can never
+   disagree with the bar it annotates. */
+function barBox(crop) {
+  const bar = crop.querySelector('.bar');
+  if (!bar) return null;
+  const b = bar.getBoundingClientRect(), c = crop.getBoundingClientRect();
+  return b.width
+    ? {x: b.left - c.left + crop.scrollLeft, y: b.top - c.top, w: b.width, h: b.height}
+    : null;
+}
+
+const ROW_GAP = 26, ROW_H = 11, RUN_DROP = 25;
+function annotate(i, s) {
+  const a = anns[i];
+  if (!a) return;
+  const r = racers(CROPS[i].only, s), box = r && barBox(a.crop);
+  if (!box) { a.layer.innerHTML = ''; return; }
+  const [u, t] = r;
+  const g = Math.round(u) - Math.round(t), v = verdict(g);
+  /* the edge marks sit where the racers actually are, not where the cells round
+     to. Two racers five points apart light the same cell — the bar cannot show
+     that and the span can. */
+  const x = pct => box.x + box.w * Math.max(0, Math.min(100, pct)) / 100;
+  const xu = x(u), xt = x(t), lo = Math.min(xu, xt), hi = Math.max(xu, xt);
+  const readY = box.y + box.h + 44;
+  a.layer.style.setProperty('--gap-color', v.c);
+  let html = `
+    <span class="lane spend" style="left:${box.x}px;top:${box.y - 13}px">you</span>
+    <span class="lane clock" style="left:${box.x}px;top:${box.y + box.h + 13}px">the clock</span>
+    <span class="edge" style="left:${xu}px;top:${box.y}px;height:${readY - box.y}px"></span>
+    <span class="edge" style="left:${xt}px;top:${box.y + box.h / 2}px;height:${readY - box.y - box.h / 2}px"></span>
+    <span class="span" style="left:${lo}px;width:${hi - lo}px;top:${readY}px"></span>
+    <span class="read" style="left:${hi}px;top:${readY}px">${signed(g)} · ${v.word}</span>`;
+
+  /* 01 alone carries the effort row. It is the section about spend against
+     time, and it is the only story that has an effort level to record. */
+  if (s.effort && s.effort !== 'reset') {
+    const rowY = readY + ROW_GAP, runY = rowY + RUN_DROP;
+    let cells = '';
+    for (let k = 0; k < CELLS; k++) {
+      const mid = k * 10 + 5;   // the tenth of the window this cell stands for
+      cells += `<i class="${mid > t ? 'none' : mid < T_SWITCH ? 'high' : 'low'}" style="width:${box.w / CELLS}px"></i>`;
+    }
+    html += `
+      <span class="effort" style="left:${box.x}px;top:${rowY}px;height:${ROW_H}px">${cells}</span>
+      <span class="run name" style="left:${box.x + box.w}px;top:${rowY + ROW_H / 2}px">effort</span>
+      <span class="run" style="left:${box.x}px;top:${runY}px">high</span>`;
+    if (s.effort === 'low')
+      html += `<span class="run low" style="left:${x(T_SWITCH)}px;top:${runY}px">low</span>`;
+  }
+  a.layer.innerHTML = html;
+}
+
 const paint = p => {
   crops.forEach((holder, i) => {
-    holder.innerHTML = statusline({...CROPS[i], ...STORIES[i](p)});
+    const s = STORIES[i](p);
+    holder.innerHTML = statusline({...CROPS[i], ...s});
+    /* the annotation reads fields a story may leave alone, so it gets the
+       filled-in line rather than the story's own partial */
+    annotate(i, {...DEFAULTS, ...s});
   });
-  dock.innerHTML = statusline({compact: true, focus: FOCUS[active], ...STORIES[active](p)});
-  cap.textContent = steps[active].dataset.cap;
+  const s = STORIES[active](p);
+  dock.innerHTML = statusline({compact: true, focus: FOCUS[active], ...s});
+  /* 01's typed comment follows its two phases. Every other section has one
+     line, and falls through to it. */
+  const d = steps[active].dataset;
+  cap.textContent = s.effort === 'low' ? d.capLow
+    : s.effort === 'reset' ? d.capReset : d.cap;
   pin.style.setProperty('--tint', steps[active].dataset.hue);
   pin.classList.add('tinted');
 };

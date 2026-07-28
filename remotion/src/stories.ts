@@ -66,29 +66,43 @@ export type Story = {
 };
 
 /**
- * 01 — usage ramps past the blue clock and the overshoot glows.
+ * 01 — high effort until the spend pulls ahead of the clock, then low, and the
+ * clock closes the gap back up.
  *
- * The arcs are tuned so the *crossing* is the event: the clock leads for the
- * first ~60% of the loop (nothing wrong yet), usage crosses it, then runs away
- * to a four-cell overshoot. The prototype's original pair (`100q²` against
- * `88q`) crossed only at p≈0.79 and peaked one cell clear, so the thing this
- * loop exists to show was on screen for under a second in eight.
+ * The crossing used to be the whole event. It is now the *middle* of one: the
+ * loop has to show the reason to touch the effort dial and the result of
+ * touching it, because that is what the page says the bar is for.
+ *
+ * The clock runs at a constant rate, because clocks do. Spend accelerates while
+ * the effort is high, crosses it, then flattens the moment the effort drops.
+ * The window turns over at the end, which is what makes the loop seamless —
+ * `cyc` is not used here because this arc is not a ramp-and-drain.
+ *
+ * These five numbers also fix where the page's effort row changes colour
+ * (docs/index.html, EFFORT_SWITCH … U_END). Change one, change the other.
  */
+const EFFORT_SWITCH = 0.42; // where in the loop the effort drops
+const RUN_END = 0.94; // where the window turns over
+const CLOCK_END = 96; // how far the clock gets before it does
+const U_SWITCH = 70; // spend at the moment of the switch
+const U_END = 92; // spend when the window turns over
+
 const burn: Story = {
   id: 'burn',
   slug: 'loop-burn',
-  summary: 'usage overtaking the blue clock, overshoot glowing',
+  summary: 'high effort overtaking the clock, then low effort letting it catch up',
   glow: ['five'],
   at: (p) => {
-    // The clock opens quickly and flattens; usage starts gently and accelerates.
-    const elapsed = cyc(p, 62, 0.9, easeOut);
-    return {
-      five: {
-        pct: cyc(p, 100, 0.9, (q) => q ** 1.5),
-        elapsed,
-        resetsIn: remaining(elapsed, FIVE_WINDOW),
-      },
-    };
+    if (p >= RUN_END) {
+      return {five: {pct: 0, elapsed: 0, resetsIn: FIVE_WINDOW}};
+    }
+    const elapsed = CLOCK_END * (p / RUN_END);
+    const pct =
+      p < EFFORT_SWITCH
+        ? U_SWITCH * (p / EFFORT_SWITCH) ** 1.4
+        : U_SWITCH +
+          (U_END - U_SWITCH) * ((p - EFFORT_SWITCH) / (RUN_END - EFFORT_SWITCH));
+    return {five: {pct, elapsed, resetsIn: remaining(elapsed, FIVE_WINDOW)}};
   },
 };
 
