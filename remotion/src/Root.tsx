@@ -15,7 +15,7 @@ import {LOOP_COMPOSITIONS, LOOP_FPS, LOOP_FRAMES, SOCIAL} from './compositions';
  */
 export const RemotionRoot: React.FC = () => (
   <>
-    {LOOP_COMPOSITIONS.map(({id, storyId, width, height, fontSize}) => (
+    {LOOP_COMPOSITIONS.map(({id, storyId, width, height, fontSize, annotate}) => (
       <Composition
         key={id}
         id={id}
@@ -24,7 +24,7 @@ export const RemotionRoot: React.FC = () => (
         fps={LOOP_FPS}
         width={width}
         height={height}
-        defaultProps={{storyId, fontSize}}
+        defaultProps={{storyId, fontSize, annotate}}
       />
     ))}
 

@@ -1,5 +1,5 @@
 import {colors, ctxColor, pctColor} from '../theme';
-import type {LimitWindow, Part, Segment, StatuslineState} from './types';
+import type {LimitWindow, Part, Segment, SegmentId, StatuslineState} from './types';
 
 /** now / 45m / 7h9m / 3d10h — mirrors fmt_reset in statusline.sh. */
 export const fmtReset = (seconds: number): string => {
@@ -157,4 +157,29 @@ export const layout = (
     column += seg.cells;
   });
   return {boxes, cells: column};
+};
+
+/**
+ * Column offset and width of one segment's bar. The landing page measures the
+ * painted `.bar` with `getBoundingClientRect`; here the geometry is already
+ * known, so the annotation is placed against this instead of against the DOM.
+ *
+ * Every variable-width field is padded (see `pctField` and friends), so this
+ * answer is the same on every frame of a loop — the marks cannot slide while
+ * `9%` grows into `100%`.
+ */
+export const barColumns = (
+  segments: Segment[],
+  id: SegmentId
+): {start: number; cells: number} | null => {
+  const index = segments.findIndex((seg) => seg.id === id);
+  if (index < 0) return null;
+  const {boxes} = layout(segments);
+  let column = boxes[index].start;
+  for (const part of segments[index].parts) {
+    if (part.kind === 'bar' || part.kind === 'stacked')
+      return {start: column, cells: part.width};
+    column += partCells(part);
+  }
+  return null;
 };

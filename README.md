@@ -134,7 +134,7 @@ Left to right:
 
 ### Usage against time
 
-![The 5h bar: spend climbing past the blue elapsed-time half at high effort, then flattening once the effort drops.](docs/assets/loop-burn.gif)
+![The 5h bar with both racers named and the gap between them read out: spend climbs past the blue elapsed-time half at high effort, then flattens once the effort drops. An effort row under the bar records which level was in force across each tenth of the window.](docs/assets/loop-burn.gif)
 
 The top half of each cell is how much of the window you have used. The bottom
 half is how much of the window has gone by. The distance between the two is the
@@ -159,14 +159,14 @@ character, so it moves before the number does.
 
 ### When a window resets
 
-![The 5h bar creeping up, dropping to zero the instant the window resets, then climbing back.](docs/assets/loop-reset.gif)
+![The 5h bar with the gap read out, creeping up, dropping to zero the instant the window resets, then climbing back.](docs/assets/loop-reset.gif)
 
 At the end of a 5-hour window both halves drop back to zero, the colour goes
 back to green, and the countdown starts again at 5h0m.
 
 ### The Fable window
 
-![The Fable bar at 100%, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
+![The Fable bar with the gap read out, at 100%, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
 
 Fable has its own weekly quota. Spend it early and nothing gives it back before
 the week is over, so the blue half is the useful one: it tells you how long the

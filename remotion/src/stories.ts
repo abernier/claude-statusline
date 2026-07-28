@@ -53,6 +53,21 @@ const CTX_WINDOW = 1000000;
 export const ctxTokens = (pct: number): number =>
   Math.round((Math.round(pct) / 100) * CTX_WINDOW);
 
+/**
+ * The race a loop can have annotated: which bar carries it, and — where the loop
+ * has one — the effort record drawn under it. Static, so a canvas can be sized
+ * for the marks before any frame is drawn.
+ */
+export type Race = {
+  segment: 'five' | 'week' | 'fable';
+  effort?: {
+    /** The clock reading at the moment the effort dropped. */
+    switchAt: number;
+    /** The level in force at p. Null while there is no record to draw. */
+    at: (p: number) => 'high' | 'low' | null;
+  };
+};
+
 export type Story = {
   id: string;
   /** Filename stem for the rendered asset. */
@@ -61,6 +76,8 @@ export type Story = {
   summary: string;
   /** Stacked bars that glow where usage overshoots the clock. */
   glow?: SegmentId[];
+  /** The spend-against-clock race this loop can name. Omit where there is none. */
+  race?: Race;
   /** The line at loop progress p ∈ [0,1). */
   at: (p: number) => StatuslineState;
 };
@@ -87,11 +104,22 @@ const CLOCK_END = 96; // how far the clock gets before it does
 const U_SWITCH = 70; // spend at the moment of the switch
 const U_END = 92; // spend when the window turns over
 
+/** The clock reading at the moment the effort dropped — where the row changes colour. */
+const T_SWITCH = CLOCK_END * (EFFORT_SWITCH / RUN_END);
+
 const burn: Story = {
   id: 'burn',
   slug: 'loop-burn',
   summary: 'high effort overtaking the clock, then low effort letting it catch up',
   glow: ['five'],
+  race: {
+    segment: 'five',
+    effort: {
+      switchAt: T_SWITCH,
+      // Past the turnover the window is empty, so there is no run to record.
+      at: (p) => (p >= RUN_END ? null : p < EFFORT_SWITCH ? 'high' : 'low'),
+    },
+  },
   at: (p) => {
     if (p >= RUN_END) {
       return {five: {pct: 0, elapsed: 0, resetsIn: FIVE_WINDOW}};
@@ -134,6 +162,9 @@ const reset: Story = {
   id: 'reset',
   slug: 'loop-reset',
   summary: 'slow creep, instant drop to zero, quick climb back',
+  // The reset is a race too — it is the same two racers, both sent back to zero.
+  // No effort row: nothing here turns on the dial.
+  race: {segment: 'five'},
   at: (p) => {
     let pct: number;
     let elapsed: number;
@@ -184,6 +215,7 @@ const fable: Story = {
   id: 'fable',
   slug: 'loop-fable',
   summary: 'Fable quota spent early, then waiting out the week for the reset',
+  race: {segment: 'fable'},
   at: (p) => {
     const elapsed = fableWeekElapsed(p);
     const pct =
