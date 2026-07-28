@@ -10,27 +10,34 @@
   Round 2 settled the shape: annotate the crops in place, change nothing else.
   That layer is variant A here, unchanged.
 
-  Round 3 question: the annotation names the race. How should it also show
-  the ACTION — that you were on high effort, saw the gap open, and dropped
-  to low? Three answers, each one more mark on top of A.
+  Round 3 tried three ways to add the effort switch. The floating callout
+  above the spend lane read as stuck on. The projection variant was dropped:
+  too much prose, overlapping marks, nothing to scan. The effort history row
+  was the part worth keeping.
+
+  Round 4 question: all three variants are that row. How loudly should it
+  announce the switch?
 
     0  the page as it ships today — the baseline
     A  the approved annotation  lane names, uprights, the gap reading
-    B  the switch, marked       a tick where the effort changed, and the
-                                effort named on the spend lane
-    C  the consequence          a dashed projection of where this rate runs
-                                out, and where the clock is when it does
-    D  the history              a third row: which effort was in force
-                                across each tenth of the window
+    E  called out    a divider through the effort row where the switch
+                     happened, and "dropped to low here" under it
+    F  self-labelled two runs, each naming itself under its own cells
+    G  named once    one phrase at the end of the row: effort · high → low
 
-  B, C and D run section 01's bar off a two-phase arc — spend accelerates,
+  Two fixes carried into all three: nothing floats above the bar any more,
+  and the row's name moved to the row's right-hand end, where it no longer
+  sits on top of the gap reading for the first half of every loop.
+
+  E, F and G run section 01's bar off a two-phase arc — spend accelerates,
   crosses the clock, then flattens the moment the effort drops — so the
   switch is something you watch. Folding one in means a matching arc in
   remotion/src/stories.ts.
 
-  Switch with ?variant=0|A|B|C|D, the floating bar, or the arrow keys. Every
-  variant appends one prototype-only section at the foot: the README hero it
-  implies. That section is evaluation furniture and is not a page proposal.
+  Switch with ?variant=0|A|E|F|G, the floating bar, or the arrow keys. Add
+  &t=0.30 to pin the loop to one frame. Every variant appends one
+  prototype-only section at the foot: the README hero it implies. That
+  section is evaluation furniture and is not a page proposal.
 
   Everything below this comment down to the PROTOTYPE markers is index.html
   as it ships. statusline.sh is untouched.
@@ -376,9 +383,6 @@ noscript img { display:block; width:100%; height:auto; }
   transform:translateY(-50%); }
 .pr-ann .nm.u { color:var(--dim); }
 .pr-ann .nm.t { color:#5f86ad; }
-.pr-ann .nm b { font-weight:400; }
-.pr-ann .eff-high { color:var(--brand); }
-.pr-ann .eff-low { color:#7f7f7f; }
 /* the bracket: two uprights and a rule between them, under the bar */
 .pr-ann .up { position:absolute; width:0; border-left:1px dashed #555; }
 .pr-ann .rule { position:absolute; height:0; border-top:1px dashed var(--gc); }
@@ -388,32 +392,35 @@ noscript img { display:block; width:100%; height:auto; }
   padding-left:9px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .crop { position:relative; }
 .crop.pr-room { padding-block:66px 80px; }
-.crop.pr-room-tall { padding-block:66px 112px; }
+.crop.pr-room-tall { padding-block:66px 124px; }
 
-/* ---- B: the switch, marked ---- */
-.pr-ann .tick { position:absolute; width:0; border-left:2px solid var(--brand); }
-.pr-ann .ticklbl { position:absolute; transform:translate(-50%,-50%); color:var(--brand);
-  white-space:nowrap; }
-
-/* ---- C: the consequence ---- */
-/* the spend you have not made yet, at the rate you are making it */
-.pr-ann .ghost { position:absolute; border:1px dashed var(--brand); opacity:.62;
-  background:repeating-linear-gradient(135deg, transparent 0 5px,
-    color-mix(in srgb, var(--brand) 26%, transparent) 5px 6px); }
-.pr-ann .up.proj { border-left:1px dashed var(--brand); }
-.pr-ann .proj-lbl { position:absolute; transform:translate(0,-50%); color:var(--brand);
-  padding-left:9px; white-space:nowrap; }
-
-/* ---- D: the history ---- */
-.pr-ann .nm.e { color:var(--brand); }
-.pr-ann .erow { position:absolute; display:flex; gap:2px; }
-.pr-ann .erow i { display:block; height:100%; }
+/* ---- E, F, G: the effort row ----
+   No flex gap here. The row has to be exactly as wide as the bar and its ten
+   cells have to land on the bar's ten cells, or the record does not line up
+   with the thing it is a record of. The cells are divided by a border drawn
+   inside the box instead. */
+.pr-ann .erow { position:absolute; display:flex; }
+.pr-ann .erow i { display:block; height:100%; box-sizing:border-box;
+  border-right:2px solid var(--sunk); }
+.pr-ann .erow i:last-child { border-right:0; }
 .pr-ann .erow i.e-high { background:var(--brand); }
 .pr-ann .erow i.e-low  { background:#6f6f6f; }
 /* the clock has not crossed these tenths yet, so there is no effort to record */
 .pr-ann .erow i.e-none { background:rgba(255,255,255,.055); }
+/* the row's name lives at the row's right-hand end. On the left it sat on top
+   of the gap reading for the first half of every loop. */
 .pr-ann .elbl { position:absolute; transform:translate(0,-50%); color:var(--brand);
-  padding-left:9px; white-space:nowrap; }
+  padding-left:11px; white-space:nowrap; letter-spacing:.14em; text-transform:uppercase; }
+
+/* E — the switch called out, inside the effort band */
+.pr-ann .edivide { position:absolute; width:0; border-left:2px solid #f2f2f2; }
+.pr-ann .ecall { position:absolute; transform:translate(-50%,-50%); color:#c9c9c9;
+  white-space:nowrap; }
+
+/* F — each run naming itself under its own cells */
+.pr-ann .runlbl { position:absolute; transform:translate(0,-50%); color:var(--brand);
+  white-space:nowrap; letter-spacing:.14em; text-transform:uppercase; }
+.pr-ann .runlbl.low { color:#8a8a8a; }
 
 /* ---- the README hero the variant implies. Evaluation furniture. ---- */
 .pr-rm { border-top:1px solid var(--hair); padding:44px var(--pad) 60px; }
@@ -975,24 +982,32 @@ const paint = p => {
 };
 
 /* ==================== PROTOTYPE ONLY ====================================
-   Round 3. "Annotate in place" won, so it is variant A here, unchanged, as
-   the thing the other three are measured against. B, C and D each add ONE
-   more mark on top of A, all answering the same question: how does the
-   annotation show that you were on high effort, saw the gap open, and
-   dropped to low?
+   Round 4. Round 3 settled two things: the effort history row works, and the
+   floating callout above the spend lane does not. Round 3's C is dropped —
+   too much prose, too much overlap, nothing to scan.
+
+   So all three variants here are the same object: the approved annotation,
+   plus a row under the bar recording which effort was in force across each
+   tenth of the window. They differ only in how loudly that row announces the
+   switch.
 
      0  the page as it ships
      A  the approved annotation — lane names, uprights, the gap reading
-     B  the switch, marked      a tick where the effort changed, and the
-                                effort named on the spend lane
-     C  the consequence         a dashed projection of where this rate runs
-                                out, and where the clock will be when it does
-     D  the history             a third row under the bar: which effort was
-                                in force across each tenth of the window
+     E  called out    a divider through the effort row where the switch
+                      happened, and "dropped to low here" under it
+     F  self-labelled two runs, each naming itself under its own cells
+     G  named once    one phrase at the end of the row: effort · high → low
 
-   B, C and D also drive section 01's bar off their own two-phase arc, so
-   the switch is something you watch rather than something you read. Folding
-   any of them in would mean a matching arc in remotion/src/stories.ts. */
+   Two fixes carried into all three:
+     - nothing floats above the bar any more. The effort marks stay inside
+       the effort band, under the gap bracket.
+     - the row's name moved to the row's right-hand end. On the old left
+       placement it sat on top of the gap reading for the first half of
+       every loop.
+
+   E, F and G drive section 01's bar off a two-phase arc, so the switch is
+   something you watch. Folding one in means a matching arc in
+   remotion/src/stories.ts. */
 const PR = (() => {
 
 /* the gap: spend minus clock, in points of the window. The page draws this
@@ -1028,17 +1043,10 @@ const effortStory = p => {
     : U_SWITCH + (U_END - U_SWITCH) * ((p - SWITCH_AT) / (RUN_END - SWITCH_AT));
   return {five:u, fiveT:t, glow:true, phase: p < SWITCH_AT ? 'high' : 'low'};
 };
-/* the clock reading at the moment the effort dropped — B's tick and D's row
-   both need it, and it must come from the arc, not from a second constant */
+/* the clock reading at the moment the effort dropped. Every variant places
+   its marks against this, and it comes from the arc rather than being
+   written down a second time. */
 const T_SWITCH = CLOCK_END * (SWITCH_AT / RUN_END);
-/* spend points per clock point, right now. Measured off the arc rather than
-   written down twice, so it can never disagree with what the bar draws. */
-function burnRate(p) {
-  const d = 0.004;
-  const a = effortStory(Math.max(0, p - d)), b = effortStory(Math.min(RUN_END - 0.001, p + d));
-  const dt = b.fiveT - a.fiveT;
-  return dt > 0 ? (b.five - a.five) / dt : 0;
-}
 
 /* Measure the bar the page just painted. Everything is placed against this
    rectangle, so the annotation can never disagree with the bar. */
@@ -1051,7 +1059,7 @@ function barBox(cropEl) {
 }
 
 /* ---- A: lane names, uprights, gap reading. The approved layer. ---- */
-function baseLayer(box, u, t, tagU) {
+function baseLayer(box, u, t) {
   const g = gapOf(u, t), v = verdictOf(g);
   /* the uprights sit where the racers actually are, not where the cells round
      to. Two racers 5 points apart light the same cell — the bar cannot show
@@ -1061,7 +1069,7 @@ function baseLayer(box, u, t, tagU) {
   const lo = Math.min(xu, xt), hi = Math.max(xu, xt);
   const brY = box.y + box.h + 44;
   return {v, xu, xt, lo, hi, brY, html: `
-    <span class="nm u" style="left:${box.x}px;top:${box.y - 13}px">you${tagU || ''}</span>
+    <span class="nm u" style="left:${box.x}px;top:${box.y - 13}px">you</span>
     <span class="nm t" style="left:${box.x}px;top:${box.y + box.h + 13}px">the clock</span>
     <span class="up" style="left:${xu}px;top:${box.y}px;height:${brY - box.y}px"></span>
     <span class="up" style="left:${xt}px;top:${box.y + box.h / 2}px;height:${brY - box.y - box.h / 2}px"></span>
@@ -1076,66 +1084,53 @@ function annotate(layer, cropEl, u, t) {
   layer.innerHTML = b.html;
 }
 
-/* ---- B, C, D: A, plus one mark about the effort ---- */
-function effortLayer(layer, cropEl, s, p, which) {
+/* ---- E, F, G: A, plus the effort row ----
+   One cell per tenth of the WINDOW, coloured by the effort that was in force
+   while the clock crossed it. Cells the clock has not reached yet stay
+   empty. The row's name sits at the right-hand end, clear of the gap
+   reading, which shares the band above it. */
+const ROW_GAP = 26, ROW_H = 11, SUB_GAP = 25;
+function effortLayer(layer, cropEl, s, which) {
   const box = barBox(cropEl);
   if (!box) { layer.innerHTML = ''; return; }
-  const u = s.five, t = s.fiveT, live = s.phase !== 'reset';
-  const effort = s.phase === 'low' ? 'low' : 'high';
-  /* the effort is named on the spend lane for B and C. D names it on its own
-     row instead, so the lane keeps A's wording. */
-  const tag = (which !== 'D' && live)
-    ? ` <b class="eff-${effort}">· ${effort} effort</b>` : '';
-  const b = baseLayer(box, u, t, tag);
+  const b = baseLayer(box, s.five, s.fiveT);
   layer.style.setProperty('--gc', b.v.c);
+  if (s.phase === 'reset') { layer.innerHTML = b.html; return; }
+
+  const t = s.fiveT, low = s.phase === 'low';
+  const cw = box.w / CELLS;
+  const rowY = b.brY + ROW_GAP, subY = rowY + ROW_H + SUB_GAP - ROW_H;
+  const xSwitch = box.x + box.w * T_SWITCH / 100;
+
+  let cells = '';
+  for (let i = 0; i < CELLS; i++) {
+    const mid = i * 10 + 5;
+    const cls = mid > t ? 'none' : mid < T_SWITCH ? 'high' : 'low';
+    cells += `<i class="e-${cls}" style="width:${cw}px"></i>`;
+  }
+  const row = `<span class="erow" style="left:${box.x}px;top:${rowY}px;height:${ROW_H}px">${cells}</span>`;
+
+  /* the row's name, and how much of the message it carries */
+  const name = which === 'G'
+    ? `effort · ${low ? 'high → low' : 'high'}`
+    : 'effort';
+  const nameEl = `<span class="elbl" style="left:${box.x + box.w}px;top:${rowY + ROW_H / 2}px">${name}</span>`;
+
   let extra = '';
-
-  if (which === 'B' && live && s.phase === 'low') {
-    /* the switch happened at a point in the SPEND, so it is marked on the
-       spend lane, not on the clock */
-    const xs = box.x + box.w * U_SWITCH / 100;
+  if (which === 'E' && low) {
+    /* the switch is marked where it happened — in the record of it, not
+       floating over the spend lane */
     extra = `
-      <span class="tick" style="left:${xs}px;top:${box.y - 6}px;height:${box.h / 2 + 12}px"></span>
-      <span class="ticklbl" style="left:${xs}px;top:${box.y - 26}px">↓ dropped to low here</span>`;
+      <span class="edivide" style="left:${xSwitch}px;top:${rowY - 4}px;height:${ROW_H + 8}px"></span>
+      <span class="ecall" style="left:${xSwitch}px;top:${subY}px">dropped to low here</span>`;
+  }
+  if (which === 'F') {
+    /* each run names itself, under its own cells. No divider, no callout. */
+    extra = `<span class="runlbl" style="left:${box.x}px;top:${subY}px">high</span>`
+      + (low ? `<span class="runlbl low" style="left:${xSwitch}px;top:${subY}px">low</span>` : '');
   }
 
-  if (which === 'C' && live) {
-    /* keep this rate and the spend hits 100% when the clock is only at
-       projT. That is the whole argument for touching the dial. */
-    const rate = burnRate(p);
-    const projT = rate > 0.001 ? t + (100 - u) / rate : 999;   // clock when spend hits 100
-    const endSpend = u + rate * (100 - t);                     // spend when the window ends
-    const dry = projT < 100;
-    const xEnd = box.x + box.w;                       // 100% of the window
-    const xProj = box.x + box.w * clamp(projT) / 100;
-    const pY = b.brY + 22;
-    extra = `
-      <span class="ghost" style="left:${b.xu}px;top:${box.y}px;width:${xEnd - b.xu}px;height:${box.h / 2}px"></span>
-      <span class="up proj" style="left:${xProj}px;top:${box.y + box.h / 2}px;height:${pY - box.y - box.h / 2}px"></span>
-      <span class="proj-lbl" style="left:${dry ? xProj : xEnd}px;top:${pY}px">${
-        dry ? `at this rate you run dry with ${Math.round(100 - projT)}% of the window left`
-            : `at this rate you finish the window with ${Math.round(100 - endSpend)}% to spare`}</span>`;
-  }
-
-  if (which === 'D' && live) {
-    /* one cell per tenth of the WINDOW, coloured by the effort that was in
-       force while the clock crossed it. Cells the clock has not reached yet
-       stay on the track colour. */
-    const cw = box.w / CELLS, rowY = b.brY + 24, rowH = 11;
-    let cells = '';
-    for (let i = 0; i < CELLS; i++) {
-      const mid = i * 10 + 5;
-      const cls = mid > t ? 'none' : mid < T_SWITCH ? 'high' : 'low';
-      cells += `<i class="e-${cls}" style="width:${cw}px"></i>`;
-    }
-    extra = `
-      <span class="nm e" style="left:${box.x}px;top:${rowY - 15}px">effort</span>
-      <span class="erow" style="left:${box.x}px;top:${rowY}px;height:${rowH}px">${cells}</span>
-      <span class="elbl" style="left:${box.x + box.w}px;top:${rowY + rowH / 2}px">${
-        s.phase === 'low' ? 'high, then low' : 'high'}</span>`;
-  }
-
-  layer.innerHTML = b.html + extra;
+  layer.innerHTML = b.html + row + nameEl + extra;
 }
 
 /* what the docked line's typed comment says while the arc runs */
@@ -1158,31 +1153,30 @@ const README = {
     note: '<b>Rendered preview:</b> re-cut <code>loop-burn.gif</code> with the lane names and the gap bracket burned in. Same 8-second arc, same composition, one annotation layer added in remotion.',
     diff: '<b>Page diff:</b> one overlay on the stacked-bar crops. No copy, no layout, no new blocks.',
   },
-  'B': {
+  'E': {
     h: 'The bar told them to drop to low effort.',
-    p: 'One bash script. Your spend races the window\'s own clock. When your half pulls ahead, drop an effort level and watch the clock catch back up.',
-    note: '<b>Rendered preview:</b> the loop becomes a two-beat story instead of one ramp — burn, switch, recover. The tick is the beat the eye lands on. Needs a new arc in <code>stories.ts</code>.',
-    diff: '<b>Page diff:</b> A, plus one tick and one word on the spend lane. Section 01 needs the two-phase arc.',
+    p: 'One bash script. Your spend races the window\'s own clock. When your half pulls ahead, drop an effort level — and the row underneath keeps the receipt.',
+    note: '<b>Rendered preview:</b> the divider is the beat the eye lands on, so the loop has a middle. The strongest of the three as a GIF, and the weakest as a still, because before the switch there is nothing to call out.',
+    diff: '<b>Page diff:</b> A, plus one row, one divider and one line of text. Section 01 needs the two-phase arc.',
   },
-  'C': {
-    h: 'At this rate you run dry with 44% of the window left.',
-    p: 'One bash script. Your spend races the window\'s own clock, and the bar says where that race ends. Drop an effort level and the projection moves back inside the window.',
-    note: '<b>Rendered preview:</b> the ghost is the frame that sells it — a still would work as well as a loop, which no other option here can claim.',
-    diff: '<b>Page diff:</b> A, plus a dashed ghost and one projected upright. Section 01 needs the two-phase arc.',
+  'F': {
+    h: 'High effort, then low, and what it cost.',
+    p: 'One bash script. Your spend races the window\'s own clock, and a row underneath remembers which effort level you were on across each tenth of it.',
+    note: '<b>Rendered preview:</b> reads as well frozen as it does moving — the two runs label themselves whether or not you saw the switch happen. Best candidate for a static README image.',
+    diff: '<b>Page diff:</b> A, plus one row and two words. Section 01 needs the two-phase arc.',
   },
-  'D': {
+  'G': {
     h: 'Your window, and what you spent it on.',
-    p: 'One bash script. Your spend races the window\'s own clock, and a third row remembers which effort level you were on across each tenth of it.',
-    note: '<b>Rendered preview:</b> the loop has to run long enough to fill the row, so this is the slowest of the three to read. It is also the only one that survives as a static screenshot of a real session.',
-    diff: '<b>Page diff:</b> A, plus a third row and a legend. The tallest of the three, and the only one that adds a lane.',
+    p: 'One bash script. Your spend races the window\'s own clock, and a row underneath records the effort level behind every tenth of it.',
+    note: '<b>Rendered preview:</b> the quietest of the three. Nothing new appears mid-loop, so the GIF has no beat — but nothing has to be read either. Same still as F, one label lighter.',
+    diff: '<b>Page diff:</b> A, plus one row and one phrase. The smallest of the three. Section 01 needs the two-phase arc.',
   },
 };
 
 /* ---- mount / switch ---- */
 const NAMES = {'0':'the page as it ships', 'A':'the approved annotation',
-               'B':'the switch, marked', 'C':'the consequence',
-               'D':'the history'};
-const KEYS = ['0', 'A', 'B', 'C', 'D'];
+               'E':'called out', 'F':'self-labelled', 'G':'named once'};
+const KEYS = ['0', 'A', 'E', 'F', 'G'];
 const rmEl = document.getElementById('pr-rm');
 let key = (new URLSearchParams(location.search).get('variant') || '0').toUpperCase();
 if (!KEYS.includes(key)) key = '0';
@@ -1198,12 +1192,12 @@ function mount() {
   layers = [];
 
   /* every annotated variant marks up the three crops that hold a race. Only
-     section 01 gets the effort layer: it is the section about spend against
+     section 01 gets the effort row: it is the section about spend against
      time, and the other two stories are about something else. */
   const wanted = key === '0' ? [] : [0, 2, 3];
   wanted.forEach(i => {
     const cropEl = crops[i].closest('.crop');
-    cropEl.classList.add(i === 0 && (key === 'C' || key === 'D') ? 'pr-room-tall' : 'pr-room');
+    cropEl.classList.add(i === 0 && key !== 'A' ? 'pr-room-tall' : 'pr-room');
     const layer = document.createElement('div');
     layer.className = 'pr-ann';
     cropEl.appendChild(layer);
@@ -1239,7 +1233,7 @@ function decorate(p) {
          has already painted this crop once this frame; repaint it, then
          measure. A real change would edit STORIES[0] rather than overwrite. */
       crops[0].innerHTML = statusline({...CROPS[0], ...eff});
-      effortLayer(layer, cropEl, eff, p, key);
+      effortLayer(layer, cropEl, eff, key);
       return;
     }
     const s = {...DEFAULTS, ...STORIES[i](p)};
