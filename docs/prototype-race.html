@@ -1,0 +1,1297 @@
+<!doctype html>
+<!--
+  ============================================================================
+  PROTOTYPE — THROWAWAY. Not linked from anywhere. Do not ship this file.
+
+  This file starts as a byte-for-byte copy of index.html. Variant 0 IS the
+  current page, untouched, so every other variant can be judged as a diff
+  against it rather than against memory.
+
+  Round 2 settled the shape: annotate the crops in place, change nothing else.
+  That layer is variant A here, unchanged.
+
+  Round 3 tried three ways to add the effort switch. The floating callout
+  above the spend lane read as stuck on. The projection variant was dropped:
+  too much prose, overlapping marks, nothing to scan. The effort history row
+  was the part worth keeping.
+
+  Round 4 question: all three variants are that row. How loudly should it
+  announce the switch?
+
+    0  the page as it ships today — the baseline
+    A  the approved annotation  lane names, uprights, the gap reading
+    E  called out    a divider through the effort row where the switch
+                     happened, and "dropped to low here" under it
+    F  self-labelled two runs, each naming itself under its own cells
+    G  named once    one phrase at the end of the row: effort · high → low
+
+  Two fixes carried into all three: nothing floats above the bar any more,
+  and the row's name moved to the row's right-hand end, where it no longer
+  sits on top of the gap reading for the first half of every loop.
+
+  E, F and G run section 01's bar off a two-phase arc — spend accelerates,
+  crosses the clock, then flattens the moment the effort drops — so the
+  switch is something you watch. Folding one in means a matching arc in
+  remotion/src/stories.ts.
+
+  Switch with ?variant=0|A|E|F|G, the floating bar, or the arrow keys. Add
+  &t=0.30 to pin the loop to one frame. Every variant appends one
+  prototype-only section at the foot: the README hero it implies. That
+  section is evaluation furniture and is not a page proposal.
+
+  Everything below this comment down to the PROTOTYPE markers is index.html
+  as it ships. statusline.sh is untouched.
+
+  One deviation in variant 0: the docked line gets 46px of bottom padding, so
+  the switcher does not sit on top of it. Nothing else in variant 0 differs.
+  ============================================================================
+
+  claude-statusline — the landing page. Ticket #7 of wayfinder map #1.
+
+  The page is one Claude Code TUI frame: a sidebar drives a guided walkthrough,
+  each section owns a hue and shows a zoomed loop of the segment it explains, and
+  the statusline docked at the frame's foot plays the active section's loop in
+  that section's colour. Design settled in #4.
+
+  The six statuslines on this page are LIVE DOM, not the rendered media in
+  docs/assets/ — the docked line has to retint and switch loops per section, and
+  the crops have to stay in phase with it off the same ticker, neither of which a
+  video can do. The rendered loops appear only inside <noscript>, as the no-JS
+  fallback, and in the README.
+
+  Two things are mirrored from elsewhere and must not drift:
+    - geometry + palette from statusline.sh (bars, thresholds, ↻ formatting)
+    - the five animation arcs from remotion/src/stories.ts, so the page and the
+      rendered media tell the same story
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — claude-statusline, the race identity</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
+<link rel="canonical" href="https://alp82.github.io/claude-statusline/">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://alp82.github.io/claude-statusline/">
+<meta property="og:title" content="claude-statusline — a statusline for Claude Code">
+<meta property="og:description" content="One bash script. Folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits — as bars, under the prompt, while you work.">
+<meta property="og:image" content="https://alp82.github.io/claude-statusline/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@alperortac">
+
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/jetbrains-mono-latin.woff2" crossorigin>
+<style>
+/* Self-hosted so the page reads the same everywhere, and so the frame matches
+   the rendered media, which bundles the same face (remotion/src/font.ts). One
+   variable file covers 400 and 700. The latin subset deliberately excludes the
+   box-drawing and symbol glyphs (★ ⎇ ↻ │ ▀ ⏵ ⟩) — those fall through to the
+   tail of the stack per glyph, exactly as they do in the renders. */
+@font-face {
+  font-family:'JetBrains Mono';
+  src:url('assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  font-weight:100 800;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --brand: #D97757;
+  /* the script's own palette — untouched (statusline.sh, pct_color/ctx_color) */
+  --green: rgb(140,194,74);
+  --yellow: rgb(220,200,60);
+  --red: rgb(220,60,60);
+  --dim: rgb(138,138,138);
+  --sep: rgb(55,55,55);
+  --track: rgb(55,55,55);
+  --blue: rgb(40,80,130);
+  --dirc: rgb(95,175,215);
+
+  --bg: #0d0d0d;
+  --app: #161616;
+  --sunk: #101010;          /* anything that reads as a screen within the frame */
+  --fg: #ededed;
+  --muted: #8f8f8f;
+  --faint: #6e6e6e;
+  --line: #242424;
+  --hair: #1e1e1e;
+
+  /* one inline rhythm for every region inside the frame, and one content measure
+     so text, loops and install blocks share the same right edge */
+  --pad: clamp(26px, 4.2vw, 46px);
+  --measure: 780px;
+  --tint: transparent;
+  --mono: 'JetBrains Mono','DejaVu Sans Mono','Liberation Mono',ui-monospace,monospace;
+}
+@property --wash { syntax:'<percentage>'; inherits:true; initial-value:5%; }
+
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--mono);
+  font-size:14px; -webkit-font-smoothing:antialiased; }
+a { color:inherit; }
+::selection { background:var(--brand); color:#141414; }
+:focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:3px; }
+
+/* ================= the statusline ================= */
+/* tabular figures + reserved width per field: values change every frame, and the
+   line must not shuffle sideways when 9% becomes 100%.
+   line-height is the terminal cell: a bar is drawn with `▀`/`█`, which fill the
+   whole character cell, so the bar box is exactly one line box tall. 1.45 is
+   remotion/src/theme.ts's metrics.lineHeightRatio — page and renders agree. */
+.sl { display:flex; align-items:center; white-space:nowrap; line-height:1.45;
+  font-variant-numeric:tabular-nums; }
+.sl .seg { display:inline-flex; align-items:center; gap:.55em; transition:opacity .45s ease; }
+.sl .seg.off { opacity:.22; }
+.sl .pipe { color:var(--sep); padding:0 .85em; }
+.sl .dir { color:var(--dirc); }
+.sl .br, .sl .label, .sl .reset, .sl .tok { color:var(--dim); }
+/* `★ Model` is printed green, not yellow — statusline.sh:147 */
+.sl .star { color:var(--green); }
+.sl .pct { min-width:2.6em; text-align:right; }
+.sl .reset { min-width:3.9em; }
+/* right-aligned like .pct, so the `k` holds one column as the count grows */
+.sl .tok { min-width:2.6em; text-align:right; }
+/* .6em per cell is the mono advance width (theme.ts cellWidthRatio) */
+.bar { display:flex; height:1.45em; width:6em; background:var(--track); flex:0 0 auto; }
+.bar .cell { width:.6em; height:100%; display:flex; flex-direction:column; }
+.bar .cell .top, .bar .cell .bot { height:50%; }
+.bar .cell .bot { position:relative; z-index:1; }   /* blue paints over the glow */
+.bar.plain { position:relative; }
+.bar.plain .fill { position:absolute; left:0; top:0; bottom:0; }
+.overshoot { box-shadow:0 0 .16em currentColor; }
+
+/* ================= the Claude Code TUI ================= */
+.tui { container-type:inline-size; font-size:13px; }
+.tui-head { display:flex; gap:18px; align-items:flex-start; padding:26px var(--pad) 16px; }
+.tui-head .who .name { color:#f2f2f2; font-weight:700; }
+.tui-head .who .ver { color:#5f5f5f; margin-left:9px; font-weight:400; }
+.tui-head .who .meta, .tui-head .who .cwd { color:#a9a9a9; line-height:1.7; }
+.tui-hint { display:flex; gap:13px; color:#8a8a8a; padding:0 var(--pad); line-height:1.6; }
+.tui-hint .rule { width:2px; background:#3a3a3a; flex:0 0 2px; border-radius:2px; }
+.tui-prompt { border-top:1px solid #2b2b2b; padding:18px var(--pad); display:flex; gap:13px;
+  color:#6a6a6a; }
+.tui-prompt .chev { color:#8a8a8a; }
+.tui-prompt .cur::after { content:'▊'; color:#8a8a8a; animation:blink 1.05s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0 } }
+.tui-sl { padding:52px var(--pad) 48px; }
+.tui-mode { color:var(--brand); padding:0 var(--pad) 28px; font-size:12.5px; }
+.tui-mode span { color:var(--faint); }
+/* the caption is a typed comment — it needs air above it, not just below */
+.tui-cap { color:var(--faint); font-size:.86em; padding:20px var(--pad) 0; min-height:1.5em; }
+.tui-cap::after { content:'▊'; color:#454545; animation:blink 1.05s steps(1) infinite; }
+
+/* the zoomed loop under each section. It scrolls inside its own box rather than
+   bursting the layout: below ~640px the line is wider than any phone, and the
+   font-size clamp bottoms out at 9px long before it would fit. */
+.crop { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+  padding:30px 26px; margin-top:22px; container-type:inline-size; max-width:var(--measure);
+  overflow-x:auto; scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+/* the whole-line loop is 109 cells wide — held to --measure it would render
+   smaller than the docked line it is supposed to be a zoom of */
+.crop.wide { max-width:none; }
+/* the rendered loop, shown only when there is no JS to drive the live one */
+noscript img { display:block; width:100%; height:auto; }
+
+/* ================= controls ================= */
+/* one size and one job: every button on the page copies something, and each one
+   sits in the header of the block it copies */
+.btn { height:30px; font-family:var(--mono); font-size:12px; cursor:pointer;
+  background:transparent; border:1px solid #333; color:var(--muted); padding:0 11px;
+  border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+  white-space:nowrap; transition:border-color .18s ease, color .18s ease, background-color .18s ease; }
+.btn:hover { border-color:var(--brand); color:var(--brand); }
+.btn svg { width:14px; height:14px; fill:currentColor; flex:0 0 auto; }
+
+/* ================= sidebar ================= */
+.side { position:sticky; top:0; height:100vh; border-right:1px solid var(--hair);
+  padding:34px 20px; display:flex; flex-direction:column; z-index:7; background:var(--bg); }
+.side .brand { font-size:15px; margin-bottom:4px; letter-spacing:-.01em; }
+.side .brand b { color:var(--brand); font-weight:600; }
+.side .ver { color:#565656; font-size:11px; margin-bottom:16px; }
+.side .grp { color:#4f4f4f; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  margin:0 0 10px 14px; }
+.side nav { margin-bottom:24px; }
+.side nav a { display:flex; gap:11px; text-decoration:none; color:#8a8a8a; font-size:12.5px;
+  padding:7px 14px; border-left:2px solid transparent; line-height:1.5; border-radius:0 5px 5px 0;
+  transition:color .2s ease, background-color .35s ease, border-color .35s ease; }
+.side nav a i { font-style:normal; color:#4a4a4a; font-size:11px; padding-top:1px;
+  transition:color .35s ease; }
+.side nav a:hover { color:var(--fg); }
+.side nav a.on { color:var(--fg); border-left-color:var(--stepc, var(--brand));
+  background:color-mix(in srgb, var(--stepc, var(--brand)) 13%, transparent); }
+.side nav a.on i { color:var(--stepc, var(--brand)); }
+
+/* the two off-page links, as one pair of matching pills under the brand: both
+   are the same card, and both are small enough not to compete with the nav.
+   They sit on one row at 236px and wrap only if the sidebar ever narrows. */
+.side .social { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:26px; }
+.side .social a { display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  padding:6px 8px; border-radius:7px; background:var(--sunk); border:1px solid var(--hair);
+  color:#c4c4c4; font-size:11px; line-height:1.2;
+  transition:border-color .25s ease, background-color .25s ease, color .25s ease; }
+/* one hover driver: `color` carries both the label and the currentColor icon */
+.side .social a:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
+  background:color-mix(in srgb, var(--brand) 10%, var(--sunk)); color:var(--brand); }
+.side .social svg { width:12px; height:12px; flex:none; fill:currentColor; }
+.shell { display:grid; grid-template-columns:236px minmax(0,1fr); }
+
+/* ================= app frame ================= */
+.main { height:100vh; display:flex; flex-direction:column; }
+/* min-width:0 all the way down, or the docked line's own min-content width holds
+   the column open, the `.tui` container never gets narrow, and the container
+   query that wraps the line never fires — the page just grows sideways instead */
+.app { flex:1; min-height:0; min-width:0; display:flex; flex-direction:column; margin:20px 22px 0;
+  border:1px solid #2a2a2a; border-radius:11px 11px 0 0; overflow:hidden; background:var(--app); }
+.scrollarea { flex:1; min-height:0; overflow-y:auto; padding-bottom:26px;
+  scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; scroll-behavior:smooth; }
+.scrollarea::-webkit-scrollbar { width:12px; }
+.scrollarea::-webkit-scrollbar-track { background:transparent; }
+.scrollarea::-webkit-scrollbar-thumb { background:#2c2c2c; border-radius:99px;
+  border:3.5px solid var(--app); background-clip:padding-box; }
+.scrollarea::-webkit-scrollbar-thumb:hover { background:#3d3d3d; background-clip:padding-box; }
+
+/* the docked line carries the active section's tint, so line and section read as
+   one continuous band */
+.appfoot { border-top:1px solid var(--line); background:var(--app);
+  box-shadow:inset 3px 0 0 var(--tint);
+  transition:background-color .6s ease, box-shadow .6s ease; }
+.appfoot.tinted { background:color-mix(in srgb, var(--tint) 10%, var(--app)); }
+
+/* ================= page regions — all on the same inline rule ================= */
+.hero, .step, .tail { padding-inline:var(--pad); }
+.hero { padding-block:34px 30px; }
+.hero h1 { font-size:clamp(26px,2.9vw,38px); font-weight:600; letter-spacing:-.028em;
+  line-height:1.2; margin:0 0 12px; max-width:22ch; }
+.hero .sub { color:var(--muted); font-size:14.5px; line-height:1.75; max-width:62ch;
+  margin:0 0 24px; }
+/* what to do with the prompt, then the two ways out of the hero */
+.hero .after { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:14px;
+  color:var(--faint); font-size:12.5px; }
+.hero .after a { text-decoration:none; border-bottom:1px solid #333; padding-bottom:1px; }
+.hero .after a:hover { color:var(--brand); border-bottom-color:var(--brand); }
+
+/* Baseline is the readable one: dimming the inactive sections only makes sense
+   once there is JS to undim the active one, so it hangs off the `js` class. */
+.step { min-height:44vh; display:flex; flex-direction:column; justify-content:center;
+  padding-block:7vh; opacity:1; --wash:9%;
+  /* a full-width band of the section's colour, fading out top and bottom so the
+     sections melt into one another instead of stacking as cards */
+  background:linear-gradient(180deg, transparent,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 22%,
+    color-mix(in srgb, var(--stepc) var(--wash), transparent) 78%, transparent);
+  transition:opacity .4s ease, --wash .6s ease; }
+.js .step { opacity:.5; --wash:5%; }
+.js .step.on { opacity:1; --wash:15%; }
+.step .n { color:var(--stepc, var(--brand)); font-size:11px; letter-spacing:.22em;
+  margin-bottom:10px; }
+.step h2 { font-size:20px; font-weight:600; margin:0 0 10px; line-height:1.3;
+  letter-spacing:-.015em; }
+.step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0; max-width:60ch; }
+
+/* ================= install ================= */
+.tail { border-top:1px solid var(--hair); padding-block:54px 34px; }
+.tail h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#6b6b6b;
+  margin:0 0 6px; font-weight:600; }
+.tail .intro { color:var(--muted); font-size:14px; line-height:1.75; margin:0 0 26px;
+  max-width:60ch; }
+/* Install / Uninstall. Without JS the switch is meaningless, so it stays hidden
+   and both panels render one after the other — every step still readable. */
+.tabs { display:none; gap:4px; margin:0 0 22px; padding:3px; border:1px solid var(--line);
+  border-radius:9px; background:var(--sunk); width:max-content; max-width:100%; }
+.js .tabs { display:flex; }
+.tab { font-family:var(--mono); font-size:12.5px; height:30px; padding:0 16px; cursor:pointer;
+  background:transparent; border:0; border-radius:6px; color:var(--faint);
+  transition:color .18s ease, background-color .18s ease; }
+.tab:hover { color:var(--muted); }
+.tab.on { background:#232323; color:var(--brand); }
+.js .tabpanel:not(.on) { display:none; }
+.install { display:flex; flex-direction:column; gap:18px; max-width:var(--measure); }
+.ib { border:1px solid var(--line); border-radius:10px; background:var(--sunk);
+  overflow:hidden; }
+.ib-head { display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:13px 18px; border-bottom:1px solid var(--hair); background:#131313; }
+.ib-lbl { color:#9d9d9d; font-size:12.5px; display:flex; align-items:center; gap:11px; }
+.ib-lbl b { color:var(--brand); font-weight:600; font-size:11px; }
+/* the hero's copy of the block: the prompt IS the call to action, so the whole
+   surface is the copy target and the brand rule marks it as the way in. The
+   button stays real for keyboard and screen readers — see the click forwarding
+   at the foot of the page. */
+.ib.paste { max-width:var(--measure); border-left:2px solid var(--brand); cursor:pointer;
+  transition:border-color .18s ease, background-color .18s ease; }
+.ib.paste:hover { border-color:color-mix(in srgb, var(--brand) 55%, transparent);
+  border-left-color:var(--brand);
+  background:color-mix(in srgb, var(--brand) 4%, var(--sunk)); }
+.ib.paste .btn { color:var(--brand); border-color:color-mix(in srgb, var(--brand) 45%, transparent); }
+.ib.paste:hover .btn { border-color:var(--brand); }
+.ib pre { margin:0; padding:16px 18px; font-family:var(--mono); font-size:12.5px;
+  line-height:1.85; color:#d2d2d2; overflow-x:auto; background:transparent;
+  scrollbar-width:thin; scrollbar-color:#2e2e2e transparent; }
+.ib pre .p { color:var(--brand); }   /* Claude Code prompt caret */
+.ib pre .c { color:#5d5d5d; }        /* comment */
+.ib pre .k { color:var(--dirc); }    /* json key */
+.ib pre .s { color:var(--green); }   /* string */
+.ib .note { padding:0 18px 16px; color:var(--faint); font-size:12px; line-height:1.7; }
+.ib .note code { color:#a9a9a9; }
+.req { margin:24px 0 0; color:var(--faint); font-size:12.5px; line-height:1.8; max-width:70ch; }
+.req b { color:#a9a9a9; font-weight:500; }
+.foot { display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+  color:#565656; font-size:12px; padding:34px 0 8px; }
+.foot a { text-decoration:none; border-bottom:1px solid #333; padding-bottom:1px; }
+.foot a:hover { color:var(--brand); border-bottom-color:var(--brand); }
+
+/* ================= responsive =================
+   The line is kept whole on narrow screens by wrapping it one segment per row and
+   dropping the pipes. Keyed on the CONTAINER, so it reflows the moment its own
+   space runs out — which also makes it testable on a wide screen. */
+@container (max-width:640px) {
+  .tui-sl .sl { flex-wrap:wrap; white-space:normal; row-gap:12px; font-size:14px !important; }
+  .tui-sl .sl .pipe { display:none; }
+  .tui-sl .sl .seg { flex:0 0 100%; }
+}
+@media (max-width:960px) {
+  .shell { grid-template-columns:minmax(0,1fr); }
+  .side { position:static; height:auto; border-right:0; border-bottom:1px solid var(--hair); }
+  .side nav { margin-bottom:16px; }
+  .main { height:auto; }
+  .app { margin:12px; border-radius:11px; }
+  .step, .js .step { min-height:0; padding-block:52px; opacity:1; --wash:9%; }
+  .tui-sl { padding-block:36px 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html, .scrollarea { scroll-behavior:auto; }
+  *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; }
+}
+
+/* ================== PROTOTYPE ONLY — everything below here ==================
+   One overlay per crop, drawn over an untouched page. The effort layer uses
+   the brand orange throughout, because the bar's own green / yellow / red
+   already mean "how much quota is left" and must keep meaning only that. */
+
+/* ---- A: the approved annotation ---- */
+.pr-ann { position:absolute; inset:0; pointer-events:none; font-size:11.5px; }
+.pr-ann .nm { position:absolute; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap;
+  transform:translateY(-50%); }
+.pr-ann .nm.u { color:var(--dim); }
+.pr-ann .nm.t { color:#5f86ad; }
+/* the bracket: two uprights and a rule between them, under the bar */
+.pr-ann .up { position:absolute; width:0; border-left:1px dashed #555; }
+.pr-ann .rule { position:absolute; height:0; border-top:1px dashed var(--gc); }
+/* the reading sits past the right-hand upright, so it never runs off the left
+   edge of the crop when both racers are still near zero */
+.pr-ann .gn { position:absolute; transform:translate(0,-50%); color:var(--gc);
+  padding-left:9px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.crop { position:relative; }
+.crop.pr-room { padding-block:66px 80px; }
+.crop.pr-room-tall { padding-block:66px 124px; }
+
+/* ---- E, F, G: the effort row ----
+   No flex gap here. The row has to be exactly as wide as the bar and its ten
+   cells have to land on the bar's ten cells, or the record does not line up
+   with the thing it is a record of. The cells are divided by a border drawn
+   inside the box instead. */
+.pr-ann .erow { position:absolute; display:flex; }
+.pr-ann .erow i { display:block; height:100%; box-sizing:border-box;
+  border-right:2px solid var(--sunk); }
+.pr-ann .erow i:last-child { border-right:0; }
+.pr-ann .erow i.e-high { background:var(--brand); }
+.pr-ann .erow i.e-low  { background:#6f6f6f; }
+/* the clock has not crossed these tenths yet, so there is no effort to record */
+.pr-ann .erow i.e-none { background:rgba(255,255,255,.055); }
+/* the row's name lives at the row's right-hand end. On the left it sat on top
+   of the gap reading for the first half of every loop. */
+.pr-ann .elbl { position:absolute; transform:translate(0,-50%); color:var(--brand);
+  padding-left:11px; white-space:nowrap; letter-spacing:.14em; text-transform:uppercase; }
+
+/* E — the switch called out, inside the effort band */
+.pr-ann .edivide { position:absolute; width:0; border-left:2px solid #f2f2f2; }
+.pr-ann .ecall { position:absolute; transform:translate(-50%,-50%); color:#c9c9c9;
+  white-space:nowrap; }
+
+/* F — each run naming itself under its own cells */
+.pr-ann .runlbl { position:absolute; transform:translate(0,-50%); color:var(--brand);
+  white-space:nowrap; letter-spacing:.14em; text-transform:uppercase; }
+.pr-ann .runlbl.low { color:#8a8a8a; }
+
+/* ---- the README hero the variant implies. Evaluation furniture. ---- */
+.pr-rm { border-top:1px solid var(--hair); padding:44px var(--pad) 60px; }
+.pr-rm h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#6b6b6b;
+  margin:0 0 4px; font-weight:600; }
+.pr-rm .warn { color:#5d5d5d; font-size:11.5px; margin:0 0 20px; }
+.pr-rm .canvas { border:1px solid var(--line); border-radius:10px; background:#0d0d0d;
+  padding:clamp(22px,3.4vw,44px); display:flex; flex-direction:column; align-items:center;
+  gap:20px; text-align:center; max-width:var(--measure); }
+.pr-rm .canvas h3 { margin:0; font-size:clamp(16px,2vw,23px); font-weight:600; letter-spacing:-.02em; }
+.pr-rm .canvas p { margin:0; color:var(--muted); font-size:13px; line-height:1.7; max-width:54ch; }
+.pr-rm .canvas img, .pr-rm .canvas .pr-rmbar { width:100%; max-width:660px; height:auto; }
+.pr-rm .canvas .pr-rmbar { display:flex; justify-content:center; }
+.pr-rm .note { color:var(--faint); font-size:12px; line-height:1.75; margin:16px 0 0; max-width:68ch; }
+.pr-rm .note b { color:#a9a9a9; font-weight:500; }
+.pr-rm .diff { color:var(--faint); font-size:12px; line-height:1.75; margin:14px 0 0; max-width:68ch; }
+.pr-rm .diff b { color:var(--brand); font-weight:500; }
+.pr-rm code { color:#a9a9a9; }
+
+/* ---- the switcher. Deliberately not part of the design being judged. ---- */
+.pr-bar { position:fixed; left:50%; bottom:11px; transform:translateX(-50%); z-index:99;
+  display:flex; align-items:center; gap:3px; background:#f2f2f2; color:#111; border-radius:99px;
+  padding:5px; box-shadow:0 8px 30px rgba(0,0,0,.6); font-family:var(--mono); font-size:12px; }
+.pr-bar button { font-family:inherit; font-size:14px; line-height:1; cursor:pointer; border:0;
+  background:transparent; color:#111; width:28px; height:28px; border-radius:99px; }
+.pr-bar button:hover { background:#dcdcdc; }
+.pr-bar .lbl { padding:0 10px; white-space:nowrap; }
+.pr-bar .lbl b { font-weight:600; }
+.pr-bar .tag { background:#111; color:#f2f2f2; border-radius:99px; padding:4px 9px; font-size:10px;
+  letter-spacing:.14em; }
+/* the switcher would sit on top of the docked line, so give it its own band */
+.appfoot { padding-bottom:46px; }
+</style>
+<!-- everything that only makes sense once the ticker and the scroll observer are
+     running hangs off this class, so the page degrades to a readable still -->
+<script>document.documentElement.className = 'js';</script>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand"><b>claude</b>-statusline</div>
+    <div class="ver">one bash file · MIT</div>
+    <div class="social">
+      <a href="https://github.com/alp82/claude-statusline" target="_blank" rel="noopener" title="claude-statusline on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a href="https://x.com/alperortac" target="_blank" rel="noopener me" title="Alper Ortac on X">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <span>@alperortac</span>
+      </a>
+    </div>
+    <nav><a href="#start">Start</a></nav>
+    <div class="grp">Walkthrough</div>
+    <nav class="stepnav">
+      <a href="#s0" data-step="0"><i>01</i>Usage against time</a>
+      <a href="#s1" data-step="1"><i>02</i>Context window</a>
+      <a href="#s2" data-step="2"><i>03</i>When a window resets</a>
+      <a href="#s3" data-step="3"><i>04</i>The Fable window</a>
+      <a href="#s4" data-step="4"><i>05</i>What is on the line</a>
+    </nav>
+    <div class="grp">Reference</div>
+    <nav>
+      <a href="#install">Install</a>
+    </nav>
+  </aside>
+
+  <main class="main"><div class="app">
+    <div class="scrollarea" id="scrollarea">
+      <div class="inner">
+
+        <!-- the TUI's own header, as Claude Code prints it on startup -->
+        <div class="tui-head">
+          <div>
+            <svg height="34" width="34" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#D97757" fill-rule="nonzero" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg>
+          </div>
+          <div class="who">
+            <div><span class="name">Claude Code</span><span class="ver">v2.1.294</span></div>
+            <div class="meta">Opus 5 with high effort · Claude Max</div>
+            <div class="cwd">~/dev/projects/claude-statusline</div>
+          </div>
+        </div>
+        <div class="tui-hint"><span class="rule"></span><span>Using Opus 5 (from .claude/settings.json) · /model</span></div>
+
+        <header class="hero" id="start">
+          <h1>A statusline for Claude Code.</h1>
+          <p class="sub">One bash script. It shows your folder and branch, the model, how full the
+            context window is, and how much of your 5-hour, 7-day and Fable limits you have used —
+            as bars, under the prompt, while you work.</p>
+          <!-- The prompt in full, as the thing you click. The visible <pre> and the
+               button's data-copy are the same four lines twice over — they must
+               stay in step, and they must match install step 01 further down. -->
+          <div class="ib paste" data-copy-surface>
+            <div class="ib-head">
+              <span class="ib-lbl">The prompt for Claude Code</span>
+              <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+            </div>
+            <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+  Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+          </div>
+          <div class="after">
+            <span>Paste it into Claude Code and press return.</span>
+            <a href="#install">Install it by hand</a>
+            <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
+          </div>
+        </header>
+
+        <section class="step" id="s0" data-i="0" data-hue="#cf8a4e"
+                 data-cap="# used more than time passed" style="--stepc:#cf8a4e">
+          <div class="n">01</div>
+          <h2>Usage against time</h2>
+          <p>The top half of each cell is how much of the window you have used. The bottom half is
+            how much of the window has gone by. If the top reaches further right than the bottom,
+            you are using it faster than the clock, and you will run out before it resets.</p>
+          <div class="crop">
+            <div class="slh" data-crop="0" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-burn.gif" width="1000" height="200"
+              alt="The 5h bar: usage climbing past the blue elapsed-time half, the overshoot glowing."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s1" data-i="1" data-hue="#c0564e"
+                 data-cap="# context filling up" style="--stepc:#c0564e">
+          <div class="n">02</div>
+          <h2>Context window</h2>
+          <p>Turns yellow at 25% and red at 50% — sooner than the limit bars, because a full context
+            window stops you working right away. The bar fills in eighths of a character, so it
+            moves before the number does.</p>
+          <div class="crop">
+            <div class="slh" data-crop="1" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-context.gif" width="1000" height="200"
+              alt="The Ctx bar filling to 78%, turning yellow then red, then compacting back down to the summary."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s2" data-i="2" data-hue="#6ea85c"
+                 data-cap="# window reset" style="--stepc:#6ea85c">
+          <div class="n">03</div>
+          <h2>When a window resets</h2>
+          <p>At the end of a 5-hour window both halves drop back to zero, the colour goes back to
+            green, and the countdown starts again at 5h0m.</p>
+          <div class="crop">
+            <div class="slh" data-crop="2" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-reset.gif" width="1000" height="200"
+              alt="The 5h bar creeping up, dropping to zero the instant the window resets, then climbing back."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s3" data-i="3" data-hue="#8f79c0"
+                 data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
+          <div class="n">04</div>
+          <h2>The Fable window</h2>
+          <p>Fable has its own weekly quota. Spend it early and nothing gives it back before the
+            week is over, so the blue half is the useful one: it tells you how long the wait is.
+            The window resets with the 7-day one, which is why it shows no ↻ of its own.</p>
+          <p>Claude Code does not send this one. The script reads it from ~/.claude.json and only
+            asks the API for a fresh value in the background, at most every ten minutes.</p>
+          <div class="crop">
+            <div class="slh" data-crop="3" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-fable.gif" width="1000" height="200"
+              alt="The Fable bar at 100%, holding while the blue week-elapsed half runs to the reset."></noscript>
+          </div>
+        </section>
+
+        <section class="step" id="s4" data-i="4" data-hue="#5891bd"
+                 data-cap="# context, 5h, 7d, Fable" style="--stepc:#5891bd">
+          <div class="n">05</div>
+          <h2>What is on the line</h2>
+          <p>The context window, then the 5-hour, 7-day and Fable windows — each one a label, a bar
+            and a number. Your folder, branch and model sit further left, at the start of the line.</p>
+          <div class="crop wide">
+            <div class="slh" data-crop="4" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
+              alt="The whole statusline from Ctx rightward, every window moving at once."></noscript>
+          </div>
+        </section>
+
+        <section class="tail" id="install">
+          <h2>Install</h2>
+
+          <div class="tabs" role="tablist" aria-label="Install or uninstall">
+            <button class="tab on" role="tab" id="t-add" aria-controls="p-add"
+                    aria-selected="true">Install</button>
+            <button class="tab" role="tab" id="t-rm" aria-controls="p-rm"
+                    aria-selected="false">Uninstall</button>
+          </div>
+
+          <div class="tabpanel on" id="p-add" role="tabpanel" aria-labelledby="t-add">
+          <p class="intro">Paste one prompt into Claude Code. It installs the script, wires Claude
+            Code up to it, and checks the result.</p>
+          <div class="install">
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
+                <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+  Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
+  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+              <div class="note">Claude reads the installer before it runs it, tells you what changed,
+                and fixes anything missing. Re-paste it to upgrade.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>02</b>Or run the installer yourself</span>
+                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
+              <div class="note">Same script, no agent in the middle. Drops <code>statusline.sh</code>
+                into <code>~/.claude/</code>, makes it executable and points
+                <code>settings.json</code> at it — backing up anything it replaces. Re-run it to
+                upgrade. <code>--no-settings</code> installs the script only; <code>--help</code> has
+                the rest.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>03</b>Or install it by hand</span>
+                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
+    -o ~/.claude/statusline.sh
+$ chmod +x ~/.claude/statusline.sh</pre>
+              <div class="note">One file, nothing else. Then add the settings below yourself.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>04</b>Point Claude Code at it</span>
+                <button class="btn" data-copy='{ "statusLine": { "type": "command", "command": "~/.claude/statusline.sh" } }'><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre><span class="c">// ~/.claude/settings.json</span>
+{ <span class="k">"statusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
+    <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> } }</pre>
+              <div class="note">The prompt and the one-liner both write this for you. You need it
+                only after a manual install, or after <code>--no-settings</code>.</div>
+            </div>
+
+          </div>
+          <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. Claude Code sends the script
+            JSON on stdin; the Fable number is the only thing the script fetches itself, in the
+            background and throttled to once every ten minutes.</p>
+          </div><!-- /p-add -->
+
+          <div class="tabpanel" id="p-rm" role="tabpanel" aria-labelledby="t-rm">
+          <p class="intro">The same prompt in reverse. It removes the script and the
+            <code>statusLine</code> entry, and leaves a backup of each.</p>
+          <div class="install">
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
+                <button class="btn" data-copy="Uninstall the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall&#10;Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer&#10;has a statusLine entry, and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre><span class="p">&gt;</span> Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
+  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+  Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
+  has a statusLine entry, and show me which .bak files it left behind.</pre>
+              <div class="note">Claude runs it, reads the result back, and tells you where the
+                backups are.</div>
+            </div>
+
+            <div class="ib">
+              <div class="ib-head">
+                <span class="ib-lbl"><b>02</b>Or run it yourself</span>
+                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+              </div>
+              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall</pre>
+              <div class="note">Deletes <code>~/.claude/statusline.sh</code> and drops the
+                <code>statusLine</code> entry from <code>settings.json</code>, backing up both as
+                <code>.bak</code> first, and clears the cached usage numbers. It touches nothing
+                else in <code>settings.json</code>, and leaves the entry alone if it points at
+                someone else's statusline. <code>--no-settings</code> removes the script only.</div>
+            </div>
+
+          </div>
+          <p class="req">Nothing else to undo — the only state the statusline keeps is the Fable
+            number it caches under <code>~/.claude/cache/</code>, and that goes with it. Delete the
+            <b>.bak</b> files once you are sure you want them gone.</p>
+          </div><!-- /p-rm -->
+          <div class="foot">
+            <span>MIT</span>
+            <a href="https://github.com/alp82/claude-statusline">alp82/claude-statusline</a>
+            <a href="https://x.com/alperortac" rel="noopener me">@alperortac</a>
+          </div>
+        </section>
+
+        <!-- PROTOTYPE ONLY: what README.md's hero becomes under this variant -->
+        <section class="pr-rm" id="pr-rm"></section>
+
+      </div>
+    </div>
+
+    <!-- the docked statusline: exactly where Claude Code renders the real one -->
+    <div class="appfoot" id="pin">
+      <div class="tui">
+        <div class="tui-cap" id="cap"></div>
+        <div class="tui-prompt"><span class="chev">⟩</span><span class="cur"></span></div>
+        <div class="tui-sl">
+          <div class="slh" id="dock" aria-hidden="true"></div>
+          <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
+            alt="The statusline: context, 5h, 7d and Fable windows, all moving."></noscript>
+        </div>
+        <div class="tui-mode">⏵⏵ bypass permissions on <span>(shift+tab to cycle) · ← for agents</span></div>
+      </div>
+    </div>
+
+  </div></main>
+</div>
+
+<!-- PROTOTYPE ONLY -->
+<div class="pr-bar">
+  <span class="tag">PROTOTYPE</span>
+  <button id="pr-prev" title="previous variant (←)">‹</button>
+  <span class="lbl"><b id="pr-key">0</b> — <span id="pr-name"></span></span>
+  <button id="pr-next" title="next variant (→)">›</button>
+</div>
+
+<script>
+/* ================= geometry, mirroring statusline.sh =================
+   The page draws the line rather than screenshotting it, so every rule the
+   script prints by has to be restated here. Line numbers refer to statusline.sh. */
+const CELLS = 10;                       // bar width in cells (:150, :162, …)
+const CELL_EM = 0.6;                    // mono advance width (theme.ts cellWidthRatio)
+const FIVE_WINDOW = 5 * 3600;
+const WEEK_WINDOW = 7 * 86400;
+
+/* pct_color() :106 — 5h / 7d / Fable */
+const pctColor = p => p > 80 ? 'var(--red)' : p >= 50 ? 'var(--yellow)' : 'var(--green)';
+/* ctx_color() :114 — tighter, because a full context window stops you at once */
+const ctxColor = p => p >= 50 ? 'var(--red)' : p >= 25 ? 'var(--yellow)' : 'var(--green)';
+
+/* fmt_reset() :165 — now / 45m / 7h9m / 3d10h */
+const fmtReset = secs => {
+  const s = Math.max(0, Math.round(secs));
+  if (s <= 60) return '↻now';
+  if (s < 3600) return `↻${(s / 60) | 0}m`;
+  if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
+  return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
+};
+/* fmt_tokens() :158 — context tokens in thousands, 1k … 999k. The page has only
+   the percentage, so the count is derived from it against a 1M window, which is
+   what every current Claude model has. */
+const CTX_WINDOW = 1000000;
+const fmtTokens = pct =>
+  `${Math.min(999, Math.max(1, Math.round((pct / 100) * CTX_WINDOW / 1000)))}k`;
+/* the inverse of elapsed_pct() :195 — the countdown is a reading of how far into
+   the window we are, so it is derived, never animated on its own */
+const remaining = (elapsedPct, windowSeconds) =>
+  Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
+
+/* bar() :122 — solid fill at 1/8-cell resolution on a dark track */
+function plainBar(pct, color) {
+  const eighths = Math.floor((Math.max(0, Math.min(100, pct)) * CELLS * 8) / 100);
+  return `<span class="bar plain"><span class="fill" style="width:${(eighths / 8) * CELL_EM}em;background:${color}"></span></span>`;
+}
+/* stacked_bar() :138 — usage on the top half of each cell, window-time-elapsed
+   (blue) on the bottom half, both snapped to whole cells, as `▀` forces */
+function stackedBar(usage, elapsed, color, glow) {
+  const u = Math.max(0, Math.min(100, usage)), t = Math.max(0, Math.min(100, elapsed));
+  let uc = Math.round(u * CELLS / 100), tc = Math.round(t * CELLS / 100);
+  if (u > 0 && uc === 0) uc = 1;
+  if (t > 0 && tc === 0) tc = 1;
+  let cells = '';
+  for (let i = 0; i < CELLS; i++) {
+    const filled = i < uc, over = filled && i >= tc;
+    cells += `<span class="cell">
+      <span class="top ${glow && over ? 'overshoot' : ''}" style="background:${filled ? color : 'var(--track)'};color:${color}"></span>
+      <span class="bot" style="background:${i < tc ? 'var(--blue)' : 'var(--track)'}"></span>
+    </span>`;
+  }
+  return `<span class="bar">${cells}</span>`;
+}
+
+/* The idle line, for whatever a story leaves alone. There is no `fableT`: the
+   Fable window resets with the 7-day one, so `weekT` is the blue half of both
+   bars and the two can never drift apart. */
+const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7,
+                  glow:false, only:null, focus:null, compact:false};
+
+/* `compact` drops dir/branch/model — the line from Ctx rightward;
+   `only` crops to a single segment. */
+function statusline(o = {}) {
+  const s = {...DEFAULTS, ...o};
+  /* the script is handed percentages already rounded (jq `| round`), and uses
+     the same integer for the bar and the number — so they can never disagree */
+  const R = Math.round;
+  const ctx = R(s.ctx), five = R(s.five), week = R(s.week), fable = R(s.fable);
+  const skip = id => (s.only && s.only !== id) || (s.compact && (id === 'dir' || id === 'model'));
+  const seg = (id, inner) => skip(id) ? null
+    : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
+  const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
+  const reset = t => `<span class="reset">${t}</span>`;
+  const tok = v => `<span class="tok">${fmtTokens(v)}</span>`;
+  const parts = [
+    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
+    seg('model', `<span class="star">★</span><span>Opus 5</span>`),
+    seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
+    seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
+    seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
+  ].filter(Boolean);
+  /* the line is sized off its container, so one crop can hold one huge segment
+     and the docked line can hold four small ones. A crop can override both to
+     stay a zoom of the docked line rather than a shrunk copy of it. */
+  const k = s.k ?? (s.only ? 5.4 : s.compact ? 1.0 : 1.15);
+  const cap = s.cap ?? (s.only ? 44 : s.compact ? 15 : 21);
+  return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
+}
+
+/* ================= the five loops =================
+   Ported from remotion/src/stories.ts — the rendered media in docs/assets/ is
+   these same arcs, so the two files have to be changed together. Every story
+   starts and ends at the same state, which is what makes the loop seamless. */
+const easeIn = p => p * p;
+const easeOut = p => 1 - (1 - p) * (1 - p);
+const linear = p => p;
+/* ramp 0→peak by `drain`, then fall back to 0 by p=1 */
+const cyc = (p, peak, drain = 0.9, ease = linear) =>
+  p < drain ? peak * ease(p / drain) : peak * (1 - (p - drain) / (1 - drain));
+/* where the 7-day window starts every loop: just past halfway, which is what
+   puts its countdown at ↻3d10h */
+const WEEK_ELAPSED = 51;
+/* compaction leaves a summary behind, so the context arc floors here, not at 0 */
+const CTX_FLOOR = 6;
+/* 04's two beats: the quota is spent, then the weekly window turns over */
+const FABLE_SPENT_AT = 0.42, FABLE_RESET_AT = 0.9;
+
+const STORIES = [
+  /* 01 — the clock opens quickly and flattens; usage starts gently and
+     accelerates, so the crossing itself is the event */
+  p => ({five: cyc(p, 100, 0.9, q => q ** 1.5), fiveT: cyc(p, 62, 0.9, easeOut), glow: true}),
+  /* 02 — the context window fills, then compacts back to the summary */
+  p => ({ctx: CTX_FLOOR + cyc(p, 78 - CTX_FLOOR, 0.92, easeOut)}),
+  /* 03 — creep, then an instant drop to zero, held a beat, then the climb back */
+  p => {
+    let pct, elapsed;
+    if (p < 0.8) { const q = p / 0.8; pct = 84 + 8 * q; elapsed = 94 + 6 * q; }
+    else {
+      const q = (p - 0.8) / 0.2;
+      if (q < 0.14) { pct = 0; elapsed = 0; }
+      else { const r = (q - 0.14) / 0.86; pct = 84 * r; elapsed = 94 * r; }
+    }
+    return {five: pct, fiveT: elapsed};
+  },
+  /* 04 — the Fable quota is spent long before the week is over, and only the
+     weekly reset gives it back. The blue clock runs the whole way to the end of
+     the window, then everything on that clock — Fable and 7d alike — drops to
+     zero, which is where the loop starts. */
+  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
+         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
+         week: 68 * (p / FABLE_RESET_AT),
+         weekT: 100 * (p / FABLE_RESET_AT)},
+  /* 05 — the whole line, every window alive at once. One wall clock drives every
+     blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
+     window and 2.1 points of a 7-day one. */
+  p => {
+    const fiveT = cyc(p, 72, 0.95);
+    return {ctx: CTX_FLOOR + cyc(p, 52, 0.95),
+            five: cyc(p, 64, 0.95, easeIn), fiveT,
+            week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED + fiveT * FIVE_WINDOW / WEEK_WINDOW,
+            fable: 7 + cyc(p, 26, 0.95)};
+  },
+];
+
+/* what each crop frames, and which segment the docked line keeps lit */
+const CROPS = [{only:'five'}, {only:'ctx'}, {only:'five'}, {only:'fable'},
+               {compact:true, k:1.35, cap:18}];
+const FOCUS = ['five', 'ctx', 'five', 'fable', null];
+
+/* ================= behaviour ================= */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* the frame the stills are taken on (stories.ts STILL_PROGRESS): every bar is
+   well into its ramp, so nothing reads as empty or maxed out */
+const STILL = 0.62;
+const PERIOD = 8000;   // 8s a loop, as the renders are cut (compositions.ts)
+
+const scroller = document.getElementById('scrollarea');
+const pin = document.getElementById('pin');
+const dock = document.getElementById('dock');
+const cap = document.getElementById('cap');
+const steps = [...document.querySelectorAll('.step')];
+const navLinks = [...document.querySelectorAll('[data-step]')];
+const crops = [...document.querySelectorAll('[data-crop]')];
+
+/* install / uninstall tabs */
+const tabs = [...document.querySelectorAll('[role=tab]')];
+const showTab = t => tabs.forEach(o => {
+  const on = o === t;
+  o.classList.toggle('on', on);
+  o.setAttribute('aria-selected', on);
+  document.getElementById(o.getAttribute('aria-controls')).classList.toggle('on', on);
+});
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => showTab(t));
+  /* arrow keys are what a tablist is expected to answer to */
+  t.addEventListener('keydown', e => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const next = tabs[(i + d + tabs.length) % tabs.length];
+    showTab(next); next.focus();
+  });
+});
+
+document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
+  navigator.clipboard?.writeText(b.dataset.copy);
+  const was = b.innerHTML;
+  b.textContent = 'copied';
+  setTimeout(() => (b.innerHTML = was), 1200);
+}));
+
+/* clicking anywhere on the hero's prompt is the same as pressing its button —
+   the button stays the real control, so keyboard and screen readers are unaffected */
+document.querySelectorAll('[data-copy-surface]').forEach(surface => {
+  const btn = surface.querySelector('[data-copy]');
+  surface.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    btn.click();
+  });
+});
+
+/* scroll picks the active section: the sidebar highlight, the deepened band, and
+   which loop the docked line plays */
+let active = 0;
+const io = new IntersectionObserver(entries => entries.forEach(e => {
+  if (!e.isIntersecting) return;
+  active = +e.target.dataset.i;
+  steps.forEach(s => s.classList.toggle('on', s === e.target));
+  navLinks.forEach(a => a.classList.toggle('on', +a.dataset.step === active));
+  const on = document.querySelector('.side nav a.on');
+  if (on) on.style.setProperty('--stepc', e.target.dataset.hue);
+}), {root: scroller, rootMargin: '-42% 0px -42% 0px'});
+steps.forEach(s => io.observe(s));
+
+/* the sidebar scrolls the app frame, not the window */
+document.querySelectorAll('.side nav a[href^="#"]').forEach(a => a.addEventListener('click', ev => {
+  const target = document.querySelector(a.getAttribute('href'));
+  if (!target) return;
+  ev.preventDefault();
+  target.scrollIntoView({behavior: REDUCED ? 'auto' : 'smooth', block: 'center'});
+}));
+
+const paint = p => {
+  crops.forEach((holder, i) => {
+    holder.innerHTML = statusline({...CROPS[i], ...STORIES[i](p)});
+  });
+  dock.innerHTML = statusline({compact: true, focus: FOCUS[active], ...STORIES[active](p)});
+  cap.textContent = steps[active].dataset.cap;
+  pin.style.setProperty('--tint', steps[active].dataset.hue);
+  pin.classList.add('tinted');
+  PR.decorate(p);            // PROTOTYPE ONLY — the one line added to paint()
+};
+
+/* ==================== PROTOTYPE ONLY ====================================
+   Round 4. Round 3 settled two things: the effort history row works, and the
+   floating callout above the spend lane does not. Round 3's C is dropped —
+   too much prose, too much overlap, nothing to scan.
+
+   So all three variants here are the same object: the approved annotation,
+   plus a row under the bar recording which effort was in force across each
+   tenth of the window. They differ only in how loudly that row announces the
+   switch.
+
+     0  the page as it ships
+     A  the approved annotation — lane names, uprights, the gap reading
+     E  called out    a divider through the effort row where the switch
+                      happened, and "dropped to low here" under it
+     F  self-labelled two runs, each naming itself under its own cells
+     G  named once    one phrase at the end of the row: effort · high → low
+
+   Two fixes carried into all three:
+     - nothing floats above the bar any more. The effort marks stay inside
+       the effort band, under the gap bracket.
+     - the row's name moved to the row's right-hand end. On the old left
+       placement it sat on top of the gap reading for the first half of
+       every loop.
+
+   E, F and G drive section 01's bar off a two-phase arc, so the switch is
+   something you watch. Folding one in means a matching arc in
+   remotion/src/stories.ts. */
+const PR = (() => {
+
+/* the gap: spend minus clock, in points of the window. The page draws this
+   distance today and never names it. Naming it is the whole proposal. */
+const gapOf = (u, t) => Math.round(u) - Math.round(t);
+const verdictOf = g =>
+  g >= 12  ? {c:'var(--red)',    word:'ahead of the clock', act:'turn thinking down'} :
+  g <= -12 ? {c:'var(--green)',  word:'behind the clock',   act:'turn thinking up'} :
+             {c:'var(--yellow)', word:'level with the clock', act:'leave the dial alone'};
+const sign = n => (n > 0 ? '+' : '') + n;
+const clamp = v => Math.max(0, Math.min(100, v));
+
+/* which pair of numbers a crop is racing, given what it crops to */
+const racersOf = (only, s) =>
+  only === 'five'  ? [s.five, s.fiveT] :
+  only === 'fable' ? [s.fable, s.weekT] : null;
+
+/* ---- the two-phase arc: high effort, the switch, then low effort ----
+   One 5-hour window. The clock runs at a constant rate, because clocks do.
+   Spend accelerates while the effort is high, crosses the clock, then
+   flattens the moment the effort drops, and the clock closes the gap back
+   up. The window turns over at the end, which is what makes it loop. */
+const SWITCH_AT = 0.42;      // where in the loop the effort drops
+const RUN_END   = 0.94;      // where the window turns over
+const CLOCK_END = 96;        // how far the clock gets before it does
+const U_SWITCH  = 70;        // spend at the moment of the switch
+const U_END     = 92;        // spend when the window turns over
+const effortStory = p => {
+  if (p >= RUN_END) return {five:0, fiveT:0, glow:true, phase:'reset'};
+  const t = CLOCK_END * (p / RUN_END);
+  const u = p < SWITCH_AT
+    ? U_SWITCH * Math.pow(p / SWITCH_AT, 1.4)
+    : U_SWITCH + (U_END - U_SWITCH) * ((p - SWITCH_AT) / (RUN_END - SWITCH_AT));
+  return {five:u, fiveT:t, glow:true, phase: p < SWITCH_AT ? 'high' : 'low'};
+};
+/* the clock reading at the moment the effort dropped. Every variant places
+   its marks against this, and it comes from the arc rather than being
+   written down a second time. */
+const T_SWITCH = CLOCK_END * (SWITCH_AT / RUN_END);
+
+/* Measure the bar the page just painted. Everything is placed against this
+   rectangle, so the annotation can never disagree with the bar. */
+function barBox(cropEl) {
+  const bar = cropEl.querySelector('.bar');
+  if (!bar) return null;
+  const b = bar.getBoundingClientRect(), c = cropEl.getBoundingClientRect();
+  if (!b.width) return null;
+  return {el:bar, x:b.left - c.left, y:b.top - c.top, w:b.width, h:b.height};
+}
+
+/* ---- A: lane names, uprights, gap reading. The approved layer. ---- */
+function baseLayer(box, u, t) {
+  const g = gapOf(u, t), v = verdictOf(g);
+  /* the uprights sit where the racers actually are, not where the cells round
+     to. Two racers 5 points apart light the same cell — the bar cannot show
+     that and the bracket can. */
+  const xu = box.x + box.w * clamp(u) / 100;
+  const xt = box.x + box.w * clamp(t) / 100;
+  const lo = Math.min(xu, xt), hi = Math.max(xu, xt);
+  const brY = box.y + box.h + 44;
+  return {v, xu, xt, lo, hi, brY, html: `
+    <span class="nm u" style="left:${box.x}px;top:${box.y - 13}px">you</span>
+    <span class="nm t" style="left:${box.x}px;top:${box.y + box.h + 13}px">the clock</span>
+    <span class="up" style="left:${xu}px;top:${box.y}px;height:${brY - box.y}px"></span>
+    <span class="up" style="left:${xt}px;top:${box.y + box.h / 2}px;height:${brY - box.y - box.h / 2}px"></span>
+    <span class="rule" style="left:${lo}px;width:${hi - lo}px;top:${brY}px"></span>
+    <span class="gn" style="left:${hi}px;top:${brY}px">${sign(g)} · ${v.word}</span>`};
+}
+function annotate(layer, cropEl, u, t) {
+  const box = barBox(cropEl);
+  if (!box) { layer.innerHTML = ''; return; }
+  const b = baseLayer(box, u, t);
+  layer.style.setProperty('--gc', b.v.c);
+  layer.innerHTML = b.html;
+}
+
+/* ---- E, F, G: A, plus the effort row ----
+   One cell per tenth of the WINDOW, coloured by the effort that was in force
+   while the clock crossed it. Cells the clock has not reached yet stay
+   empty. The row's name sits at the right-hand end, clear of the gap
+   reading, which shares the band above it. */
+const ROW_GAP = 26, ROW_H = 11, SUB_GAP = 25;
+function effortLayer(layer, cropEl, s, which) {
+  const box = barBox(cropEl);
+  if (!box) { layer.innerHTML = ''; return; }
+  const b = baseLayer(box, s.five, s.fiveT);
+  layer.style.setProperty('--gc', b.v.c);
+  if (s.phase === 'reset') { layer.innerHTML = b.html; return; }
+
+  const t = s.fiveT, low = s.phase === 'low';
+  const cw = box.w / CELLS;
+  const rowY = b.brY + ROW_GAP, subY = rowY + ROW_H + SUB_GAP - ROW_H;
+  const xSwitch = box.x + box.w * T_SWITCH / 100;
+
+  let cells = '';
+  for (let i = 0; i < CELLS; i++) {
+    const mid = i * 10 + 5;
+    const cls = mid > t ? 'none' : mid < T_SWITCH ? 'high' : 'low';
+    cells += `<i class="e-${cls}" style="width:${cw}px"></i>`;
+  }
+  const row = `<span class="erow" style="left:${box.x}px;top:${rowY}px;height:${ROW_H}px">${cells}</span>`;
+
+  /* the row's name, and how much of the message it carries */
+  const name = which === 'G'
+    ? `effort · ${low ? 'high → low' : 'high'}`
+    : 'effort';
+  const nameEl = `<span class="elbl" style="left:${box.x + box.w}px;top:${rowY + ROW_H / 2}px">${name}</span>`;
+
+  let extra = '';
+  if (which === 'E' && low) {
+    /* the switch is marked where it happened — in the record of it, not
+       floating over the spend lane */
+    extra = `
+      <span class="edivide" style="left:${xSwitch}px;top:${rowY - 4}px;height:${ROW_H + 8}px"></span>
+      <span class="ecall" style="left:${xSwitch}px;top:${subY}px">dropped to low here</span>`;
+  }
+  if (which === 'F') {
+    /* each run names itself, under its own cells. No divider, no callout. */
+    extra = `<span class="runlbl" style="left:${box.x}px;top:${subY}px">high</span>`
+      + (low ? `<span class="runlbl low" style="left:${xSwitch}px;top:${subY}px">low</span>` : '');
+  }
+
+  layer.innerHTML = b.html + row + nameEl + extra;
+}
+
+/* what the docked line's typed comment says while the arc runs */
+const effortCaption = s =>
+  s.phase === 'reset' ? '# the window resets'
+  : s.phase === 'high' ? '# high effort — spending faster than the clock'
+  : '# low effort — the clock is catching up';
+
+/* ---- the README hero each variant implies ---- */
+const README = {
+  '0': {
+    h: 'dir ⎇branch · ★ Model · Ctx · 5h · 7d · Fable — at a glance',
+    p: 'One bash script. It shows your folder and branch, the active model, how full the context window is, and how much of your 5-hour, 7-day and Fable limits you have used.',
+    note: 'Today: <code>loop-whole-line.gif</code>, the whole line moving. It shows everything and says nothing. Nothing in the README names the race or the gap.',
+    diff: 'No change. This is the baseline.',
+  },
+  'A': {
+    h: 'Are you spending faster than the clock?',
+    p: 'One bash script. Each limit bar is a race: your spend on top, the window\'s own clock underneath. The gap between them tells you whether to think harder or think less.',
+    note: '<b>Rendered preview:</b> re-cut <code>loop-burn.gif</code> with the lane names and the gap bracket burned in. Same 8-second arc, same composition, one annotation layer added in remotion.',
+    diff: '<b>Page diff:</b> one overlay on the stacked-bar crops. No copy, no layout, no new blocks.',
+  },
+  'E': {
+    h: 'The bar told them to drop to low effort.',
+    p: 'One bash script. Your spend races the window\'s own clock. When your half pulls ahead, drop an effort level — and the row underneath keeps the receipt.',
+    note: '<b>Rendered preview:</b> the divider is the beat the eye lands on, so the loop has a middle. The strongest of the three as a GIF, and the weakest as a still, because before the switch there is nothing to call out.',
+    diff: '<b>Page diff:</b> A, plus one row, one divider and one line of text. Section 01 needs the two-phase arc.',
+  },
+  'F': {
+    h: 'High effort, then low, and what it cost.',
+    p: 'One bash script. Your spend races the window\'s own clock, and a row underneath remembers which effort level you were on across each tenth of it.',
+    note: '<b>Rendered preview:</b> reads as well frozen as it does moving — the two runs label themselves whether or not you saw the switch happen. Best candidate for a static README image.',
+    diff: '<b>Page diff:</b> A, plus one row and two words. Section 01 needs the two-phase arc.',
+  },
+  'G': {
+    h: 'Your window, and what you spent it on.',
+    p: 'One bash script. Your spend races the window\'s own clock, and a row underneath records the effort level behind every tenth of it.',
+    note: '<b>Rendered preview:</b> the quietest of the three. Nothing new appears mid-loop, so the GIF has no beat — but nothing has to be read either. Same still as F, one label lighter.',
+    diff: '<b>Page diff:</b> A, plus one row and one phrase. The smallest of the three. Section 01 needs the two-phase arc.',
+  },
+};
+
+/* ---- mount / switch ---- */
+const NAMES = {'0':'the page as it ships', 'A':'the approved annotation',
+               'E':'called out', 'F':'self-labelled', 'G':'named once'};
+const KEYS = ['0', 'A', 'E', 'F', 'G'];
+const rmEl = document.getElementById('pr-rm');
+let key = (new URLSearchParams(location.search).get('variant') || '0').toUpperCase();
+if (!KEYS.includes(key)) key = '0';
+let layers = [];
+
+function mount() {
+  document.getElementById('pr-key').textContent = key;
+  document.getElementById('pr-name').textContent = NAMES[key];
+
+  /* tear the last variant down completely, so switching is a clean swap */
+  document.querySelectorAll('.pr-ann').forEach(n => n.remove());
+  document.querySelectorAll('.crop').forEach(n => n.classList.remove('pr-room', 'pr-room-tall'));
+  layers = [];
+
+  /* every annotated variant marks up the three crops that hold a race. Only
+     section 01 gets the effort row: it is the section about spend against
+     time, and the other two stories are about something else. */
+  const wanted = key === '0' ? [] : [0, 2, 3];
+  wanted.forEach(i => {
+    const cropEl = crops[i].closest('.crop');
+    cropEl.classList.add(i === 0 && key !== 'A' ? 'pr-room-tall' : 'pr-room');
+    const layer = document.createElement('div');
+    layer.className = 'pr-ann';
+    cropEl.appendChild(layer);
+    layers.push({layer, cropEl, i});
+  });
+
+  const r = README[key];
+  rmEl.innerHTML = `<h2>README hero</h2>
+    <p class="warn">Prototype only. This block is not a proposal for the page.</p>
+    <div class="canvas"><h3>${r.h}</h3>
+      ${key === '0' ? `<img src="assets/loop-whole-line.gif" width="1000" alt="">`
+                    : `<div class="pr-rmbar" id="pr-rm-art"></div>`}
+      <p>${r.p}</p></div>
+    <p class="note">${r.note}</p><p class="diff">${r.diff}</p>`;
+}
+
+/* the README art is the live 5h race at hero size, off whichever arc the
+   variant is running */
+function rmArt(s) {
+  const host = document.getElementById('pr-rm-art');
+  if (!host) return;
+  host.innerHTML = statusline({only:'five', five:s.five, fiveT:s.fiveT, glow:true});
+  const sl = host.querySelector('.sl');
+  if (sl) sl.style.fontSize = '28px';
+}
+
+function decorate(p) {
+  if (key === '0') return;
+  const eff = effortStory(p);
+  layers.forEach(({layer, cropEl, i}) => {
+    if (i === 0 && key !== 'A') {
+      /* section 01 runs the two-phase arc instead of the page's own. The page
+         has already painted this crop once this frame; repaint it, then
+         measure. A real change would edit STORIES[0] rather than overwrite. */
+      crops[0].innerHTML = statusline({...CROPS[0], ...eff});
+      effortLayer(layer, cropEl, eff, key);
+      return;
+    }
+    const s = {...DEFAULTS, ...STORIES[i](p)};
+    const r = racersOf(CROPS[i].only, s);
+    if (r) annotate(layer, cropEl, r[0], r[1]);
+  });
+  if (key === 'A') {
+    rmArt({...DEFAULTS, ...STORIES[0](p)});
+  } else {
+    rmArt(eff);
+    /* while section 01 is the one being read, the docked line plays section
+       01's loop — which is now the two-phase arc — and narrates the beat */
+    if (active === 0) {
+      dock.innerHTML = statusline({compact:true, focus:'five', ...eff});
+      cap.textContent = effortCaption(eff);
+    }
+  }
+}
+
+function go(step) {
+  key = KEYS[(KEYS.indexOf(key) + step + KEYS.length) % KEYS.length];
+  const u = new URL(location.href);
+  u.searchParams.set('variant', key);
+  history.replaceState(null, '', u);
+  mount();
+}
+document.getElementById('pr-prev').addEventListener('click', () => go(-1));
+document.getElementById('pr-next').addEventListener('click', () => go(1));
+addEventListener('keydown', e => {
+  if (e.target.closest?.('input, textarea, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+
+/* ?t=0.30 pins the loop to one frame, so a single beat of the arc can be
+   looked at without chasing it. Any value from 0 to 1. */
+const tParam = parseFloat(new URLSearchParams(location.search).get('t'));
+const frozen = Number.isFinite(tParam) ? Math.max(0, Math.min(1, tParam)) : null;
+
+mount();
+return {decorate, frozen};
+})();
+
+if (REDUCED || PR.frozen !== null) {
+  paint(PR.frozen ?? STILL);  // one representative frame, no motion
+} else {
+  let acc = 0, prev = performance.now();
+  const tick = now => {
+    requestAnimationFrame(tick);
+    acc += now - prev;
+    prev = now;
+    if (acc < 66) return;    // ~15fps — a time-lapse cadence, not a smooth one
+    acc = 0;
+    paint((now % PERIOD) / PERIOD);
+  };
+  paint(STILL);              // paint once so the line is there on first frame
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>
