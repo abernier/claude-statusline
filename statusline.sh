@@ -100,6 +100,7 @@ fi
 RESET='\033[0m'
 DIM='\033[38;2;138;138;138m'
 SEP='\033[38;2;55;55;55m'
+AMBER='\033[38;2;255;175;60m'
 TRACK='48;2;55;55;55'
 
 # limit color (5h/7d/Fable): green < 50, yellow 50-80, red > 80 (truecolor RGB)
@@ -174,11 +175,22 @@ fmt_reset() {
 
 segs=()
 
-# directory + git branch
+# directory + git branch. A linked worktree's private git dir holds a
+# `commondir` file and the main .git never does — a path-string comparison of
+# --git-dir and --git-common-dir cannot tell them apart, because git returns
+# one absolute and one relative from a subdirectory. In a worktree the glyph
+# becomes an amber ⎇+ instead of ⎇.
 if [[ -n "$dir" ]]; then
   loc="\033[38;5;74m$(basename "$dir")"
   branch=$(git -C "$dir" branch --show-current 2>/dev/null)
-  [[ -n "$branch" ]] && loc+=" ${DIM}⎇ ${branch}"
+  if [[ -n "$branch" ]]; then
+    gd=$(git -C "$dir" rev-parse --absolute-git-dir 2>/dev/null)
+    if [[ -n "$gd" && -f "$gd/commondir" ]]; then
+      loc+=" ${AMBER}⎇+ ${DIM}${branch}"
+    else
+      loc+=" ${DIM}⎇ ${branch}"
+    fi
+  fi
   segs+=("${loc}${RESET}")
 fi
 

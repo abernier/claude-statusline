@@ -29,6 +29,8 @@ export type LimitWindow = {
 export type StatuslineState = {
   dir?: string;
   branch?: string;
+  /** True in a linked git worktree — the branch glyph becomes an amber ⎇+. */
+  worktree?: boolean;
   model?: string;
   ctx?: number;
   /** Raw context tokens. The segment prints them in thousands. Omit to hide. */

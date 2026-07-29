@@ -96,7 +96,12 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
   if (state.dir) {
     const parts: Part[] = [{kind: 'text', text: state.dir, color: colors.dir}];
     if (state.branch) {
-      parts.push({kind: 'text', text: ` ⎇ ${state.branch}`, color: colors.dim});
+      if (state.worktree) {
+        parts.push({kind: 'text', text: ' ⎇+', color: colors.amber});
+        parts.push({kind: 'text', text: ` ${state.branch}`, color: colors.dim});
+      } else {
+        parts.push({kind: 'text', text: ` ⎇ ${state.branch}`, color: colors.dim});
+      }
     }
     segments.push(segment('dir', parts));
   }

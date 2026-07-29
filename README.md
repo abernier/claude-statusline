@@ -120,7 +120,14 @@ statusline it is left alone. `--no-settings` removes the script only.
 
 Left to right:
 
-- **dir ⎇ branch** — the current directory's name, and the git branch you are on
+- **dir ⎇ branch** — the current directory's name, and the git branch you are on.
+  In a linked [git worktree](https://git-scm.com/docs/git-worktree) the glyph
+  becomes an amber `⎇+`, so a worktree never looks like the main checkout:
+
+  ```text
+  claude-statusline ⎇ main          ← the main checkout
+  claude-statusline-fix ⎇+ fix/bar  ← a linked worktree
+  ```
 - **★ Model** — the active model's display name
 - **Ctx** — how full the context window is, 0–100%, and the token count in
   thousands
