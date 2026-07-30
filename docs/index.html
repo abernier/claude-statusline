@@ -23,7 +23,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-statusline — a statusline for Claude Code</title>
-<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
+<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder, branch, model, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
 <link rel="canonical" href="https://alp82.github.io/claude-statusline/">
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -31,7 +31,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alp82.github.io/claude-statusline/">
 <meta property="og:title" content="claude-statusline — a statusline for Claude Code">
-<meta property="og:description" content="One bash script. Folder and branch, the model, context-window usage, and your 5-hour, 7-day and Fable limits — as bars, under the prompt, while you work.">
+<meta property="og:description" content="One bash script. Folder, branch, model, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
 <meta property="og:image" content="https://alp82.github.io/claude-statusline/assets/social-preview.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
@@ -292,6 +292,17 @@ noscript img { display:block; width:100%; height:auto; }
   letter-spacing:-.015em; }
 .step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0; max-width:60ch; }
 
+/* the colour legend under 01's crop: the bar's top half reads pace, the
+   percentage number reads usage — two rows, one per reading */
+.legend { margin-top:20px; max-width:var(--measure); display:flex; flex-direction:column;
+  gap:9px; font-size:12.5px; color:var(--muted); }
+.legend .row { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 20px; }
+.legend .t { flex:0 0 10em; color:var(--faint); font-size:10.5px; letter-spacing:.18em;
+  text-transform:uppercase; }
+.legend .key { white-space:nowrap; }
+.legend .key i { display:inline-block; width:.75em; height:.75em; border-radius:2px;
+  margin-right:8px; }
+
 /* ================= install ================= */
 .tail { border-top:1px solid var(--hair); padding-block:54px 34px; }
 .tail h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#6b6b6b;
@@ -428,9 +439,9 @@ noscript img { display:block; width:100%; height:auto; }
 
         <header class="hero" id="start">
           <h1>A statusline for Claude Code.</h1>
-          <p class="sub">One bash script. It shows your folder and branch, the model, how full the
-            context window is, and how much of your 5-hour, 7-day and Fable limits you have used —
-            as bars, under the prompt, while you work.</p>
+          <p class="sub">One bash script. It shows your folder, branch and model, how full the
+            context window is, and your 5-hour, 7-day and Fable limits as bars under the
+            prompt.</p>
           <!-- The prompt in full, as the thing you click. The visible <pre> and the
                button's data-copy are the same four lines twice over — they must
                stay in step, and they must match install step 01 further down. -->
@@ -457,19 +468,28 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap-reset="# the window resets" style="--stepc:#cf8a4e">
           <div class="n">01</div>
           <h2>Usage against time</h2>
-          <p>The top half of each cell is how much of the window you have used. The bottom half is
-            how much of the window has gone by. The distance between the two is the number to read.
-            Spend ahead of the clock and you run out before it resets, so drop an effort level.
-            Spend behind it and you can afford to think harder. The colour of the top half reads
-            the same race: green while it trails the clock, yellow when the two are level, red
-            when it leads.</p>
-          <p>The row underneath is the record: which effort level you were on across each tenth of
-            the window. Here it runs high, crosses the clock, then drops to low and the clock
-            catches back up and overtakes — red back through yellow to green.</p>
+          <p>The top half of each bar shows usage. The bottom half shows elapsed time. If usage
+            is ahead of time, you run out before the reset, so drop an effort level. If usage is
+            behind, you can raise it.</p>
+          <p>The row under the bar records the effort level for each tenth of the window. Here
+            effort is high until usage passes the clock, then low, and the clock catches up
+            again.</p>
           <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
             <noscript><img src="assets/loop-burn.gif" width="1000" height="360"
               alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green."></noscript>
+          </div>
+          <div class="legend">
+            <div class="row"><span class="t">bar · pace</span>
+              <span class="key"><i style="background:var(--green)"></i>behind the clock</span>
+              <span class="key"><i style="background:var(--yellow)"></i>level, within 5 points</span>
+              <span class="key"><i style="background:var(--red)"></i>ahead of the clock</span>
+            </div>
+            <div class="row"><span class="t">number · usage</span>
+              <span class="key"><i style="background:var(--green)"></i>under 50%</span>
+              <span class="key"><i style="background:var(--yellow)"></i>50–80%</span>
+              <span class="key"><i style="background:var(--red)"></i>over 80%</span>
+            </div>
           </div>
         </section>
 
@@ -477,9 +497,9 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# context filling up" style="--stepc:#c0564e">
           <div class="n">02</div>
           <h2>Context window</h2>
-          <p>Turns yellow at 25% and red at 50% — sooner than the limit bars, because a full context
-            window stops you working right away. The bar fills in eighths of a character, so it
-            moves before the number does.</p>
+          <p>The bar turns yellow at 25% and red at 50%. The thresholds are lower than on the
+            limit bars, because a full context window stops you at once. The bar fills in eighths
+            of a character, so it moves before the number changes.</p>
           <div class="crop">
             <div class="slh" data-crop="1" aria-hidden="true"></div>
             <noscript><img src="assets/loop-context.gif" width="1000" height="200"
@@ -491,9 +511,9 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# window reset" style="--stepc:#6ea85c">
           <div class="n">03</div>
           <h2>When a window resets</h2>
-          <p>At the end of a 5-hour window both halves drop back to zero, the percentage goes back
-            to green, and the countdown starts again at 5h0m. The top half stays green through the
-            creep — it trails the clock, so there is nothing to warn about.</p>
+          <p>When a 5-hour window ends, both halves drop to zero and the countdown restarts at
+            5h0m. The top half stays green here, because usage trails the clock the whole
+            time.</p>
           <div class="crop annotated">
             <div class="slh" data-crop="2" aria-hidden="true"></div>
             <noscript><img src="assets/loop-reset.gif" width="1000" height="306"
@@ -505,11 +525,11 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
           <div class="n">04</div>
           <h2>The Fable window</h2>
-          <p>Fable has its own weekly quota. Spend it early and nothing gives it back before the
-            week is over, so the blue half is the useful one: it tells you how long the wait is.
-            The window resets with the 7-day one, which is why it shows no ↻ of its own.</p>
-          <p>Claude Code does not send this one. The script reads it from ~/.claude.json and only
-            asks the API for a fresh value in the background, at most every ten minutes.</p>
+          <p>Fable has its own weekly quota. It refills only at the weekly reset, so the blue
+            half tells you how long the wait is. It resets with the 7-day window, so it shows no
+            ↻ of its own.</p>
+          <p>Claude Code does not send this value. The script reads it from ~/.claude.json and
+            refreshes it from the API in the background, at most every ten minutes.</p>
           <div class="crop annotated">
             <div class="slh" data-crop="3" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="306"
@@ -521,8 +541,8 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# context, 5h, 7d, Fable" style="--stepc:#5891bd">
           <div class="n">05</div>
           <h2>What is on the line</h2>
-          <p>The context window, then the 5-hour, 7-day and Fable windows — each one a label, a bar
-            and a number. Your folder, branch and model sit further left, at the start of the line.</p>
+          <p>The context window, then the 5-hour, 7-day and Fable windows. Each one is a label, a
+            bar and a number. Your folder, branch and model sit at the start of the line.</p>
           <div class="crop wide">
             <div class="slh" data-crop="4" aria-hidden="true"></div>
             <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
@@ -541,8 +561,8 @@ noscript img { display:block; width:100%; height:auto; }
           </div>
 
           <div class="tabpanel on" id="p-add" role="tabpanel" aria-labelledby="t-add">
-          <p class="intro">Paste one prompt into Claude Code. It installs the script, wires Claude
-            Code up to it, and checks the result.</p>
+          <p class="intro">Paste one prompt into Claude Code. Claude installs the script, updates
+            the settings, and checks the result.</p>
           <div class="install">
 
             <div class="ib">
@@ -554,8 +574,8 @@ noscript img { display:block; width:100%; height:auto; }
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
   points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
-              <div class="note">Claude reads the installer before it runs it, tells you what changed,
-                and fixes anything missing. Re-paste it to upgrade.</div>
+              <div class="note">Claude reads the installer before it runs it and tells you what
+                changed. Paste it again to upgrade.</div>
             </div>
 
             <div class="ib">
@@ -564,11 +584,11 @@ noscript img { display:block; width:100%; height:auto; }
                 <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
-              <div class="note">Same script, no agent in the middle. Drops <code>statusline.sh</code>
-                into <code>~/.claude/</code>, makes it executable and points
-                <code>settings.json</code> at it — backing up anything it replaces. Re-run it to
-                upgrade. <code>--no-settings</code> installs the script only; <code>--help</code> has
-                the rest.</div>
+              <div class="note">The same script without the agent. It puts <code>statusline.sh</code>
+                into <code>~/.claude/</code> and points <code>settings.json</code> at it, with a
+                backup of anything it replaces. Run it again to upgrade.
+                <code>--no-settings</code> installs the script only. <code>--help</code> lists all
+                options.</div>
             </div>
 
             <div class="ib">
@@ -590,14 +610,14 @@ $ chmod +x ~/.claude/statusline.sh</pre>
               <pre><span class="c">// ~/.claude/settings.json</span>
 { <span class="k">"statusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
     <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> } }</pre>
-              <div class="note">The prompt and the one-liner both write this for you. You need it
-                only after a manual install, or after <code>--no-settings</code>.</div>
+              <div class="note">The prompt and the installer write this for you. You need it only
+                after a manual install or <code>--no-settings</code>.</div>
             </div>
 
           </div>
-          <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. Claude Code sends the script
-            JSON on stdin; the Fable number is the only thing the script fetches itself, in the
-            background and throttled to once every ten minutes.</p>
+          <p class="req">Needs <b>bash</b>, <b>jq</b> and <b>curl</b>. Claude Code sends the data
+            on stdin. The script fetches only the Fable number itself, in the background, at most
+            every ten minutes.</p>
           </div><!-- /p-add -->
 
           <div class="tabpanel" id="p-rm" role="tabpanel" aria-labelledby="t-rm">
@@ -614,8 +634,7 @@ $ chmod +x ~/.claude/statusline.sh</pre>
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
   Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
   has a statusLine entry, and show me which .bak files it left behind.</pre>
-              <div class="note">Claude runs it, reads the result back, and tells you where the
-                backups are.</div>
+              <div class="note">Claude runs it and tells you where the backups are.</div>
             </div>
 
             <div class="ib">
@@ -624,17 +643,18 @@ $ chmod +x ~/.claude/statusline.sh</pre>
                 <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall</pre>
-              <div class="note">Deletes <code>~/.claude/statusline.sh</code> and drops the
-                <code>statusLine</code> entry from <code>settings.json</code>, backing up both as
-                <code>.bak</code> first, and clears the cached usage numbers. It touches nothing
-                else in <code>settings.json</code>, and leaves the entry alone if it points at
-                someone else's statusline. <code>--no-settings</code> removes the script only.</div>
+              <div class="note">Removes <code>~/.claude/statusline.sh</code>, the
+                <code>statusLine</code> entry in <code>settings.json</code>, and the cached usage
+                numbers. It backs up the script and <code>settings.json</code> as
+                <code>.bak</code> first. It changes nothing else, and it leaves the entry alone if
+                it points at another statusline. <code>--no-settings</code> removes the script
+                only.</div>
             </div>
 
           </div>
-          <p class="req">Nothing else to undo — the only state the statusline keeps is the Fable
-            number it caches under <code>~/.claude/cache/</code>, and that goes with it. Delete the
-            <b>.bak</b> files once you are sure you want them gone.</p>
+          <p class="req">The only other state is the cached Fable number under
+            <code>~/.claude/cache/</code>, and the uninstall removes it too. Delete the
+            <b>.bak</b> files when you no longer need them.</p>
           </div><!-- /p-rm -->
           <div class="foot">
             <span>MIT</span>
