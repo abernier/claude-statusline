@@ -1,8 +1,10 @@
 import React from 'react';
 import {AbsoluteFill, Img, staticFile} from 'remotion';
 import {Statusline} from './statusline/Statusline';
-import {STILL_PROGRESS, storyById} from './stories';
-import {colors, fontFamily, page} from './theme';
+import {barColumns, buildSegments} from './statusline/segments';
+import {FIVE_WINDOW, WEEK_WINDOW, ctxTokens, remaining} from './stories';
+import type {StatuslineState} from './statusline/types';
+import {cellWidth, colors, ctxColor, fontFamily, paceColor, page} from './theme';
 
 /**
  * One inline rhythm for every region in the frame — the craft rule carried over
@@ -11,74 +13,116 @@ import {colors, fontFamily, page} from './theme';
  */
 const PAD = 46;
 
-const Head: React.FC = () => (
-  <div style={{display: 'flex', gap: 18, padding: `30px ${PAD}px 16px`}}>
-    <Img
-      src={staticFile('claude-logo.svg')}
-      style={{width: 38, height: 38, flex: 'none'}}
-    />
-    <div>
-      <div>
-        <span style={{color: '#f2f2f2', fontWeight: 700}}>Claude Code</span>
-        <span style={{color: '#5f5f5f', marginLeft: 10}}>v2.1.294</span>
-      </div>
-      <div style={{color: '#a9a9a9', lineHeight: 1.7}}>
-        Opus 5 with high effort · Claude Max
-      </div>
-      <div style={{color: '#a9a9a9', lineHeight: 1.7}}>
-        ~/dev/projects/claude-statusline
-      </div>
-    </div>
-  </div>
-);
+/**
+ * The docked line drops the Fable segment: 82 cells instead of 106, which is
+ * what lets it render a third larger on a card read at thumbnail size.
+ *
+ * The three readings are hand-picked so each bar demonstrates the label under
+ * it: context at 40%, the 5-hour spend ahead of its clock (red), the 7-day
+ * spend behind its clock (green).
+ */
+const FIVE = {pct: 62, elapsed: 45};
+const WEEK = {pct: 19, elapsed: 51};
+const CTX = 40;
 
-const Hint: React.FC = () => (
+const dockState = (): StatuslineState => ({
+  ctx: CTX,
+  ctxTokens: ctxTokens(CTX),
+  five: {...FIVE, resetsIn: remaining(FIVE.elapsed, FIVE_WINDOW)},
+  week: {...WEEK, resetsIn: remaining(WEEK.elapsed, WEEK_WINDOW)},
+});
+
+const Head: React.FC = () => (
   <div
     style={{
       display: 'flex',
-      gap: 13,
-      color: page.muted,
-      padding: `0 ${PAD}px`,
-      lineHeight: 1.6,
+      alignItems: 'center',
+      gap: 18,
+      padding: `26px ${PAD}px 0`,
     }}
   >
-    <span
-      style={{width: 2, flex: '0 0 2px', background: '#3a3a3a', borderRadius: 2}}
+    <Img
+      src={staticFile('claude-logo.svg')}
+      style={{width: 48, height: 48, flex: 'none'}}
     />
-    <span>Using Opus 5 (from .claude/settings.json) · /model</span>
+    <span style={{color: '#f2f2f2', fontWeight: 700, fontSize: 24}}>
+      Claude Code
+    </span>
   </div>
 );
 
+/** What each bar says to do, in the pace colour the bar itself shows. */
+const LABELS: {id: 'ctx' | 'five' | 'week'; color: string; text: string}[] = [
+  {id: 'ctx', color: ctxColor(CTX), text: 'context rot — start a new chat'},
+  {
+    id: 'five',
+    color: paceColor(FIVE.pct, FIVE.elapsed),
+    text: 'ahead of the clock — dial thinking down',
+  },
+  {
+    id: 'week',
+    color: paceColor(WEEK.pct, WEEK.elapsed),
+    text: 'behind the clock — crank thinking up',
+  },
+];
+
+/**
+ * One label under each bar, anchored to the bar's own start column — the same
+ * cell grid the line is laid out on, so nothing is measured from the DOM.
+ */
+const Labels: React.FC<{fontSize: number}> = ({fontSize}) => {
+  const segments = buildSegments(dockState());
+  const cw = cellWidth(fontSize);
+  return (
+    <div
+      style={{
+        position: 'relative',
+        height: 22,
+        margin: `12px ${PAD}px 0`,
+        fontSize: 15,
+        whiteSpace: 'pre',
+      }}
+    >
+      {LABELS.map(({id, color, text}) => {
+        const bar = barColumns(segments, id);
+        if (!bar) return null;
+        return (
+          <span
+            key={id}
+            style={{position: 'absolute', left: bar.start * cw, top: 0}}
+          >
+            <span style={{color}}>└ </span>
+            <span style={{color: page.muted}}>{text}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
 /**
  * The docked line, exactly where the real statusline renders: under the `⟩`
- * prompt, above the mode line.
+ * prompt, with the three labels where the mode line would sit.
  */
 const Dock: React.FC<{fontSize: number}> = ({fontSize}) => (
   <>
     <div
       style={{
         borderTop: `1px solid #2b2b2b`,
-        padding: `20px ${PAD}px`,
+        padding: `16px ${PAD}px`,
         display: 'flex',
-        gap: 13,
-        color: '#6a6a6a',
+        gap: 14,
+        fontSize: 22,
       }}
     >
       <span style={{color: page.muted}}>⟩</span>
       <span style={{color: page.muted}}>▊</span>
     </div>
-    <div style={{padding: `12px ${PAD}px 30px`}}>
-      <Statusline
-        state={storyById('whole-line').at(STILL_PROGRESS)}
-        fontSize={fontSize}
-      />
+    <div style={{padding: `8px ${PAD}px 0`}}>
+      <Statusline state={dockState()} fontSize={fontSize} glow={['five']} />
     </div>
-    <div style={{color: page.brand, padding: `0 ${PAD}px 26px`, fontSize: 14}}>
-      ⏵⏵ bypass permissions on{' '}
-      <span style={{color: page.faint}}>
-        (shift+tab to cycle) · ← for agents
-      </span>
-    </div>
+    <Labels fontSize={fontSize} />
+    <div style={{height: 26}} />
   </>
 );
 
@@ -88,9 +132,9 @@ export type SocialProps = {
 };
 
 /**
- * The 1280×640 social preview: the landing page's above-the-fold view. The
- * headline is what survives being scaled down to a timeline thumbnail; the
- * docked line underneath is the proof, legible at full size.
+ * The 1280×640 social preview: a stripped-down Claude Code frame. The headline
+ * is what survives being scaled down to a timeline thumbnail; the docked line
+ * underneath is the proof, each bar captioned with the action it asks for.
  */
 export const Social: React.FC<SocialProps> = ({statuslineFontSize}) => (
   // The frame is a terminal, so every word in it is monospace. `Statusline` sets
@@ -108,39 +152,36 @@ export const Social: React.FC<SocialProps> = ({statuslineFontSize}) => (
         border: '1px solid #2a2a2a',
         borderRadius: 14,
         overflow: 'hidden',
-        fontSize: 15,
         color: page.fg,
       }}
     >
       <Head />
-      <Hint />
 
-      <div style={{padding: `36px ${PAD}px 0`}}>
+      <div style={{padding: `34px ${PAD}px 0`}}>
         <h1
           style={{
             margin: 0,
-            fontSize: 42,
+            fontSize: 80,
             fontWeight: 700,
             letterSpacing: '-0.02em',
-            lineHeight: 1.15,
+            lineHeight: 1.12,
           }}
         >
-          A statusline for Claude Code.
+          A statusline
+          <br />
+          for Claude Code.
         </h1>
         <p
           style={{
-            margin: '16px 0 0',
+            margin: '22px 0 0',
             color: page.muted,
-            fontSize: 16,
-            lineHeight: 1.65,
-            maxWidth: 780,
+            fontSize: 23,
+            lineHeight: 1.5,
           }}
         >
-          One bash script. Your folder and branch, the model, how full the
-          context window is, and how much of your 5-hour, 7-day and Fable limits
-          you have used.
+          The racing bars tell you if your tokens will last until the reset.
         </p>
-        <p style={{margin: '18px 0 0', color: page.brand, fontSize: 15}}>
+        <p style={{margin: '16px 0 0', color: page.brand, fontSize: 22}}>
           alp82/claude-statusline
         </p>
       </div>

@@ -65,8 +65,9 @@ export const SOCIAL = {
   width: 1280,
   height: 640,
   /**
-   * The largest size at which all 106 cells still clear the frame's padding:
-   * (1280 − 2×28 outer − 2×46 inline) / 106 cells / 0.6 advance ≈ 17.8.
+   * The largest size at which the card's 82 cells (the whole line minus the
+   * Fable segment — see `dockState` in Social.tsx) still clear the frame's
+   * padding: (1280 − 2×28 outer − 2×46 inline) / 82 cells / 0.6 advance ≈ 23.0.
    */
-  statuslineFontSize: 17,
+  statuslineFontSize: 23,
 } as const;
