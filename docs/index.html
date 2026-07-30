@@ -465,11 +465,11 @@ noscript img { display:block; width:100%; height:auto; }
             when it leads.</p>
           <p>The row underneath is the record: which effort level you were on across each tenth of
             the window. Here it runs high, crosses the clock, then drops to low and the clock
-            catches back up.</p>
+            catches back up and overtakes — red back through yellow to green.</p>
           <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
             <noscript><img src="assets/loop-burn.gif" width="1000" height="360"
-              alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens and returns to yellow once the effort drops."></noscript>
+              alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green."></noscript>
           </div>
         </section>
 
@@ -789,7 +789,7 @@ const EFFORT_SWITCH = 0.42;   // where in the loop the effort drops
 const RUN_END = 0.94;         // where the window turns over
 const CLOCK_END = 96;         // how far the clock gets before it does
 const U_SWITCH = 70;          // spend at the moment of the switch
-const U_END = 92;             // spend when the window turns over
+const U_END = 78;             // spend when the window turns over — 18 behind the clock, green
 /* the clock reading at the moment the effort dropped */
 const T_SWITCH = CLOCK_END * (EFFORT_SWITCH / RUN_END);
 

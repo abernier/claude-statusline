@@ -141,7 +141,7 @@ Left to right:
 
 ### Usage against time
 
-![The 5h bar with both racers named and the gap between them read out: spend climbs past the blue elapsed-time half at high effort and turns red, then flattens and returns to yellow once the effort drops. An effort row under the bar records which level was in force across each tenth of the window.](docs/assets/loop-burn.gif)
+![The 5h bar with both racers named and the gap between them read out: spend climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green. An effort row under the bar records which level was in force across each tenth of the window.](docs/assets/loop-burn.gif)
 
 The top half of each cell is how much of the window you have used. The bottom
 half is how much of the window has gone by. The distance between the two is the
@@ -150,7 +150,8 @@ number to read.
 If the top reaches further right than the bottom, you are spending faster than
 the clock and you will run out before the window resets. Drop an effort level and
 the spend rate falls with it, which is what the loop above shows: high effort
-until the gap opens, then low, and the clock catches back up. If the bottom
+until the gap opens, then low, and the clock catches back up and overtakes. The
+bar walks back from red through yellow to green as it does. If the bottom
 reaches further right, you are leaving quota you will not get back, so you can
 afford to think harder.
 
