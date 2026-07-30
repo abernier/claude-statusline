@@ -151,9 +151,9 @@ behind, you have quota to spare and can raise the effort.
 
 The bar color compares usage with elapsed time:
 
-- 🟩 behind the clock
-- 🟨 level, within 5 points
-- 🟥 ahead of the clock
+- 🟩 quota to spare: raise model or effort
+- 🟨 on pace: keep as is
+- 🟥 runs out early: lower model or effort
 
 The number color shows usage: 🟩 under 50% · 🟨 50–80% · 🟥 over 80%
 
