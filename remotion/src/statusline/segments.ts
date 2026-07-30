@@ -1,4 +1,4 @@
-import {colors, ctxColor, pctColor} from '../theme';
+import {colors, ctxColor, paceColor, pctColor} from '../theme';
 import type {LimitWindow, Part, Segment, SegmentId, StatuslineState} from './types';
 
 /** now / 45m / 7h9m / 3d10h — mirrors fmt_reset in statusline.sh. */
@@ -70,7 +70,9 @@ const limitSegment = (
           usage: pct,
           elapsed: window.elapsed,
           width: BAR_CELLS,
-          color,
+          // The bar's top row reads pace against the blue row; the % text
+          // keeps the absolute thresholds.
+          color: paceColor(pct, window.elapsed),
         },
     {kind: 'text', text: ` ${pctField(pct)}`, color},
   ];

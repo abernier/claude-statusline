@@ -18,6 +18,16 @@ export const colors = {
 export const pctColor = (pct: number): string =>
   pct > 80 ? colors.red : pct >= 50 ? colors.yellow : colors.green;
 
+/**
+ * Stacked bar top row: usage vs window-time-elapsed. Green when usage trails
+ * the blue row, yellow within ±5 points (half a cell), red when it leads —
+ * leading pace hits 100% before the window resets.
+ */
+export const paceColor = (usage: number, elapsed: number): string => {
+  const diff = usage - elapsed;
+  return diff > 5 ? colors.red : diff >= -5 ? colors.yellow : colors.green;
+};
+
 /** Context: tighter thresholds — green < 25, yellow 25–49, red >= 50. */
 export const ctxColor = (pct: number): string =>
   pct >= 50 ? colors.red : pct >= 25 ? colors.yellow : colors.green;

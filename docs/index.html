@@ -460,14 +460,16 @@ noscript img { display:block; width:100%; height:auto; }
           <p>The top half of each cell is how much of the window you have used. The bottom half is
             how much of the window has gone by. The distance between the two is the number to read.
             Spend ahead of the clock and you run out before it resets, so drop an effort level.
-            Spend behind it and you can afford to think harder.</p>
+            Spend behind it and you can afford to think harder. The colour of the top half reads
+            the same race: green while it trails the clock, yellow when the two are level, red
+            when it leads.</p>
           <p>The row underneath is the record: which effort level you were on across each tenth of
             the window. Here it runs high, crosses the clock, then drops to low and the clock
             catches back up.</p>
           <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
             <noscript><img src="assets/loop-burn.gif" width="1000" height="360"
-              alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort, then flattens once the effort drops."></noscript>
+              alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens and returns to yellow once the effort drops."></noscript>
           </div>
         </section>
 
@@ -489,8 +491,9 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap="# window reset" style="--stepc:#6ea85c">
           <div class="n">03</div>
           <h2>When a window resets</h2>
-          <p>At the end of a 5-hour window both halves drop back to zero, the colour goes back to
-            green, and the countdown starts again at 5h0m.</p>
+          <p>At the end of a 5-hour window both halves drop back to zero, the percentage goes back
+            to green, and the countdown starts again at 5h0m. The top half stays green through the
+            creep — it trails the clock, so there is nothing to warn about.</p>
           <div class="crop annotated">
             <div class="slh" data-crop="2" aria-hidden="true"></div>
             <noscript><img src="assets/loop-reset.gif" width="1000" height="306"
@@ -510,7 +513,7 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="crop annotated">
             <div class="slh" data-crop="3" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="306"
-              alt="The Fable bar with the gap read out, at 100%, holding while the blue week-elapsed half runs to the reset."></noscript>
+              alt="The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset."></noscript>
           </div>
         </section>
 
@@ -664,17 +667,23 @@ $ chmod +x ~/.claude/statusline.sh</pre>
 /* ================= geometry, mirroring statusline.sh =================
    The page draws the line rather than screenshotting it, so every rule the
    script prints by has to be restated here. Line numbers refer to statusline.sh. */
-const CELLS = 10;                       // bar width in cells (:150, :162, …)
+const CELLS = 10;                       // bar width in cells (:211, :226, …)
 const CELL_EM = 0.6;                    // mono advance width (theme.ts cellWidthRatio)
 const FIVE_WINDOW = 5 * 3600;
 const WEEK_WINDOW = 7 * 86400;
 
-/* pct_color() :106 — 5h / 7d / Fable */
+/* pct_color() :106 — 5h / 7d / Fable percentage text */
 const pctColor = p => p > 80 ? 'var(--red)' : p >= 50 ? 'var(--yellow)' : 'var(--green)';
-/* ctx_color() :114 — tighter, because a full context window stops you at once */
+/* pace_color() :114 — the stacked bar's top row, read against the blue row:
+   green trailing, yellow within ±5 points (half a cell), red leading */
+const paceColor = (u, t) => {
+  const diff = u - t;
+  return diff > 5 ? 'var(--red)' : diff >= -5 ? 'var(--yellow)' : 'var(--green)';
+};
+/* ctx_color() :125 — tighter, because a full context window stops you at once */
 const ctxColor = p => p >= 50 ? 'var(--red)' : p >= 25 ? 'var(--yellow)' : 'var(--green)';
 
-/* fmt_reset() :165 — now / 45m / 7h9m / 3d10h */
+/* fmt_reset() :177 — now / 45m / 7h9m / 3d10h */
 const fmtReset = secs => {
   const s = Math.max(0, Math.round(secs));
   if (s <= 60) return '↻now';
@@ -682,23 +691,23 @@ const fmtReset = secs => {
   if (s < 86400) return `↻${(s / 3600) | 0}h${((s % 3600) / 60) | 0}m`;
   return `↻${(s / 86400) | 0}d${((s % 86400) / 3600) | 0}h`;
 };
-/* fmt_tokens() :158 — context tokens in thousands, 1k … 999k. The page has only
+/* fmt_tokens() :167 — context tokens in thousands, 1k … 999k. The page has only
    the percentage, so the count is derived from it against a 1M window, which is
    what every current Claude model has. */
 const CTX_WINDOW = 1000000;
 const fmtTokens = pct =>
   `${Math.min(999, Math.max(1, Math.round((pct / 100) * CTX_WINDOW / 1000)))}k`;
-/* the inverse of elapsed_pct() :195 — the countdown is a reading of how far into
+/* the inverse of elapsed_pct() :217 — the countdown is a reading of how far into
    the window we are, so it is derived, never animated on its own */
 const remaining = (elapsedPct, windowSeconds) =>
   Math.max(0, (1 - elapsedPct / 100) * windowSeconds);
 
-/* bar() :122 — solid fill at 1/8-cell resolution on a dark track */
+/* bar() :133 — solid fill at 1/8-cell resolution on a dark track */
 function plainBar(pct, color) {
   const eighths = Math.floor((Math.max(0, Math.min(100, pct)) * CELLS * 8) / 100);
   return `<span class="bar plain"><span class="fill" style="width:${(eighths / 8) * CELL_EM}em;background:${color}"></span></span>`;
 }
-/* stacked_bar() :138 — usage on the top half of each cell, window-time-elapsed
+/* stacked_bar() :147 — usage on the top half of each cell, window-time-elapsed
    (blue) on the bottom half, both snapped to whole cells, as `▀` forces */
 function stackedBar(usage, elapsed, color, glow) {
   const u = Math.max(0, Math.min(100, usage)), t = Math.max(0, Math.min(100, elapsed));
@@ -740,9 +749,9 @@ function statusline(o = {}) {
     seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
     seg('model', `<span class="star">★</span><span>Opus 5</span>`),
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
-    seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, pctColor(five), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
-    seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, pctColor(week))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
-    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, pctColor(fable))}${pct(fable, pctColor(fable))}`),
+    seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, paceColor(five, s.fiveT), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
+    seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, paceColor(week, s.weekT))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
+    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, paceColor(fable, s.weekT))}${pct(fable, pctColor(fable))}`),
   ].filter(Boolean);
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to
@@ -912,7 +921,9 @@ document.querySelectorAll('.side nav a[href^="#"]').forEach(a => a.addEventListe
    A crop that holds a race gets its two racers named, each one marked where it
    actually is, and the distance between them read out. That distance is the
    number the page is about — the bar draws it and never says it. */
-const GAP_HOT = 12, GAP_COOL = -12;
+/* pace_color()'s ±5 band on integer gaps — the verdict must agree with the
+   colour the bar's top row already shows */
+const GAP_HOT = 6, GAP_COOL = -6;
 const verdict = g =>
   g >= GAP_HOT  ? {c: 'var(--red)',    word: 'ahead of the clock'} :
   g <= GAP_COOL ? {c: 'var(--green)',  word: 'behind the clock'} :

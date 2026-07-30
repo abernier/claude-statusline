@@ -16,9 +16,13 @@ import type {StatuslineState} from './types';
  * `theme.ts` and the cell grid, so nothing here depends on the DOM.
  */
 
-/** Both files decide the same way. Change one, change the other. */
-const GAP_HOT = 12;
-const GAP_COOL = -12;
+/**
+ * Both files decide the same way. Change one, change the other. The band is
+ * pace_color()'s ±5 (statusline.sh) on integer gaps: the verdict must agree
+ * with the colour the bar's top row already shows.
+ */
+const GAP_HOT = 6;
+const GAP_COOL = -6;
 
 const verdict = (gap: number): {color: string; word: string} =>
   gap >= GAP_HOT

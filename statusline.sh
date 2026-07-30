@@ -111,6 +111,17 @@ pct_color() {
   fi
 }
 
+# pace color (stacked bar top row): usage vs window-time-elapsed. Green when
+# usage trails the blue row, yellow within ±5 points (half a cell), red when it
+# leads — leading pace hits 100% before the window resets.
+pace_color() {
+  local diff=$(( $1 - $2 ))
+  if   (( diff > 5 ));   then echo '38;2;220;60;60'
+  elif (( diff >= -5 )); then echo '38;2;220;200;60'
+  else                        echo '38;2;140;194;74'
+  fi
+}
+
 # context color: green < 25, yellow 25-49, red >= 50 (tighter — context fills fast)
 ctx_color() {
   if   (( $1 >= 50 )); then echo '38;2;220;60;60'
@@ -133,14 +144,14 @@ bar() {
   printf '\033[%s;%sm%s%*s\033[0m' "$TRACK" "$fg" "$out" $(( w - used )) ""
 }
 
-# stacked_bar <usage_pct> <elapsed_pct> <width> — usage (top, green/yellow/red)
+# stacked_bar <usage_pct> <elapsed_pct> <width> — usage (top, pace-colored)
 # over window-time-elapsed (bottom, blue) in the same cells: each cell is ▀ with
 # fg = top half, bg = bottom half. Usage sticking out past blue = burning too fast.
 stacked_bar() {
   local u=$1 t=$2 w=$3
   (( u < 0 )) && u=0; (( u > 100 )) && u=100
   (( t < 0 )) && t=0; (( t > 100 )) && t=100
-  local ufg=$(pct_color "$u") bluebg='48;2;40;80;130' trackfg='38;2;55;55;55'
+  local ufg=$(pace_color "$u" "$t") bluebg='48;2;40;80;130' trackfg='38;2;55;55;55'
   local ucells=$(( (u * w + 50) / 100 )) tcells=$(( (t * w + 50) / 100 ))
   (( u > 0 && ucells == 0 )) && ucells=1
   (( t > 0 && tcells == 0 )) && tcells=1

@@ -141,7 +141,7 @@ Left to right:
 
 ### Usage against time
 
-![The 5h bar with both racers named and the gap between them read out: spend climbs past the blue elapsed-time half at high effort, then flattens once the effort drops. An effort row under the bar records which level was in force across each tenth of the window.](docs/assets/loop-burn.gif)
+![The 5h bar with both racers named and the gap between them read out: spend climbs past the blue elapsed-time half at high effort and turns red, then flattens and returns to yellow once the effort drops. An effort row under the bar records which level was in force across each tenth of the window.](docs/assets/loop-burn.gif)
 
 The top half of each cell is how much of the window you have used. The bottom
 half is how much of the window has gone by. The distance between the two is the
@@ -154,7 +154,11 @@ until the gap opens, then low, and the clock catches back up. If the bottom
 reaches further right, you are leaving quota you will not get back, so you can
 afford to think harder.
 
-Colour follows usage: green under 50%, yellow 50–80%, red above 80%.
+The colour of the top half follows pace, not usage. Green means the top trails
+the blue half. Yellow means the two are within five points of each other. Red
+means the top leads, so you will run out before the reset. The percentage
+number keeps the usage thresholds: green under 50%, yellow 50–80%, red above
+80%.
 
 ### Context window
 
@@ -168,12 +172,14 @@ character, so it moves before the number does.
 
 ![The 5h bar with the gap read out, creeping up, dropping to zero the instant the window resets, then climbing back.](docs/assets/loop-reset.gif)
 
-At the end of a 5-hour window both halves drop back to zero, the colour goes
-back to green, and the countdown starts again at 5h0m.
+At the end of a 5-hour window both halves drop back to zero, the percentage
+goes back to green, and the countdown starts again at 5h0m. The top half of the
+bar stays green through the creep: it trails the clock, so there is nothing to
+warn about.
 
 ### The Fable window
 
-![The Fable bar with the gap read out, at 100%, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
+![The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
 
 Fable has its own weekly quota. Spend it early and nothing gives it back before
 the week is over, so the blue half is the useful one: it tells you how long the
