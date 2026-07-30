@@ -291,18 +291,19 @@ noscript img { display:block; width:100%; height:auto; }
 .step h2 { font-size:20px; font-weight:600; margin:0 0 10px; line-height:1.3;
   letter-spacing:-.015em; }
 .step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0; max-width:60ch; }
+.step p + p { margin-top:12px; }
 
-/* the colour legend under 01's crop: the bar's top half reads pace, the
-   percentage number reads usage — two rows, one per reading */
-.legend { margin-top:20px; max-width:var(--measure); display:flex; flex-direction:column;
-  gap:9px; font-size:12.5px; color:var(--muted); }
-.legend .lead { margin:0 0 3px; color:var(--faint); font-size:12px; line-height:1.7;
-  max-width:60ch; }
-.legend .row { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 20px; }
-.legend .t { flex:0 0 10em; color:var(--faint); font-size:10.5px; letter-spacing:.18em;
-  text-transform:uppercase; }
-.legend .key { white-space:nowrap; }
-.legend .key i { display:inline-block; width:.75em; height:.75em; border-radius:2px;
+/* 01's colour legend, above the crop so the loop is the section's last word:
+   the bar's top half reads pace, the percentage number reads usage — one grid
+   row per reading, labels in the first column */
+.legend { margin-top:18px; max-width:var(--measure); display:grid;
+  grid-template-columns:max-content 1fr; gap:8px 20px; align-items:baseline;
+  font-size:13px; }
+.legend .t { color:var(--faint); font-size:10.5px; letter-spacing:.18em;
+  text-transform:uppercase; white-space:nowrap; }
+.legend .keys { display:flex; flex-wrap:wrap; gap:4px 20px; }
+.legend .key { white-space:nowrap; color:#c9c9c9; }
+.legend .key i { display:inline-block; width:.8em; height:.8em; border-radius:2px;
   margin-right:8px; }
 
 /* ================= install ================= */
@@ -476,25 +477,26 @@ noscript img { display:block; width:100%; height:auto; }
           <p>The row under the bar records the effort level for each tenth of the window. Here
             effort is high until usage passes the clock, then low, and the clock catches up
             again.</p>
+          <p>The bar's color compares usage with elapsed time. The number's color reads usage
+            alone. The two can disagree.</p>
+          <div class="legend">
+            <span class="t">bar · vs time</span>
+            <span class="keys">
+              <span class="key"><i style="background:var(--green)"></i>behind the clock</span>
+              <span class="key"><i style="background:var(--yellow)"></i>level, within 5 points</span>
+              <span class="key"><i style="background:var(--red)"></i>ahead of the clock</span>
+            </span>
+            <span class="t">number · usage</span>
+            <span class="keys">
+              <span class="key"><i style="background:var(--green)"></i>under 50%</span>
+              <span class="key"><i style="background:var(--yellow)"></i>50–80%</span>
+              <span class="key"><i style="background:var(--red)"></i>over 80%</span>
+            </span>
+          </div>
           <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
             <noscript><img src="assets/loop-burn.gif" width="1000" height="360"
               alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green."></noscript>
-          </div>
-          <div class="legend">
-            <p class="lead">The bar and the number use the same three colors for two different
-              readings. The two are independent — the number can be green while the bar is
-              red.</p>
-            <div class="row"><span class="t">bar · usage vs time</span>
-              <span class="key"><i style="background:var(--green)"></i>behind — quota to spare</span>
-              <span class="key"><i style="background:var(--yellow)"></i>level, within 5 points</span>
-              <span class="key"><i style="background:var(--red)"></i>ahead — runs out early</span>
-            </div>
-            <div class="row"><span class="t">number · usage alone</span>
-              <span class="key"><i style="background:var(--green)"></i>under 50% used</span>
-              <span class="key"><i style="background:var(--yellow)"></i>50–80% used</span>
-              <span class="key"><i style="background:var(--red)"></i>over 80% used</span>
-            </div>
           </div>
         </section>
 
