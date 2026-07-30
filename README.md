@@ -149,11 +149,13 @@ behind, you have quota to spare and can raise the effort.
 
 #### Colors
 
-The bar's color compares usage with elapsed time. The number's color reads
-usage alone. The two can disagree.
+The bar color compares usage with elapsed time:
 
-- **Bar:** 🟩 behind the clock · 🟨 level, within 5 points · 🟥 ahead of the clock
-- **Number:** 🟩 under 50% · 🟨 50–80% · 🟥 over 80%
+- 🟩 behind the clock
+- 🟨 level, within 5 points
+- 🟥 ahead of the clock
+
+The number color shows usage: 🟩 under 50% · 🟨 50–80% · 🟥 over 80%
 
 ### Context window
 

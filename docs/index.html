@@ -80,7 +80,7 @@
   /* one inline rhythm for every region inside the frame, and one content measure
      so text, loops and install blocks share the same right edge */
   --pad: clamp(26px, 4.2vw, 46px);
-  --measure: 780px;
+  --measure: 860px;
   --tint: transparent;
   --mono: 'JetBrains Mono','DejaVu Sans Mono','Liberation Mono',ui-monospace,monospace;
 }
@@ -293,15 +293,18 @@ noscript img { display:block; width:100%; height:auto; }
 .step p { color:var(--muted); font-size:14.5px; line-height:1.75; margin:0; max-width:60ch; }
 .step p + p { margin-top:12px; }
 
-/* 01's colour legend, above the crop so the loop is the section's last word:
-   the bar's top half reads pace, the percentage number reads usage — one grid
-   row per reading, labels in the first column */
-.legend { margin-top:18px; max-width:var(--measure); display:grid;
-  grid-template-columns:max-content 1fr; gap:8px 20px; align-items:baseline;
-  font-size:13px; }
+/* 01's text and colour legend, side by side. auto-fit collapses the grid to one
+   column the moment two 340px tracks no longer fit, so phones need no media
+   query of their own. */
+.cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap:22px 52px; align-items:start; max-width:1000px; }
+/* the bar keys stack, the number keys share a row — the two metrics carry equal
+   weight, and each group is titled by the metric it reads */
+.legend { display:flex; flex-direction:column; gap:7px; font-size:13px; }
 .legend .t { color:var(--faint); font-size:10.5px; letter-spacing:.18em;
-  text-transform:uppercase; white-space:nowrap; }
-.legend .keys { display:flex; flex-wrap:wrap; gap:4px 20px; }
+  text-transform:uppercase; }
+.legend .t:not(:first-child) { margin-top:13px; }
+.legend .row { display:flex; flex-wrap:wrap; gap:6px 18px; }
 .legend .key { white-space:nowrap; color:#c9c9c9; }
 .legend .key i { display:inline-block; width:.8em; height:.8em; border-radius:2px;
   margin-right:8px; }
@@ -471,27 +474,26 @@ noscript img { display:block; width:100%; height:auto; }
                  data-cap-reset="# the window resets" style="--stepc:#cf8a4e">
           <div class="n">01</div>
           <h2>Usage against time</h2>
-          <p>The top half of each bar shows usage. The bottom half shows elapsed time. If usage
-            is ahead of time, you run out before the reset, so drop an effort level. If usage is
-            behind, you can raise it.</p>
-          <p>The row under the bar records the effort level for each tenth of the window. Here
-            effort is high until usage passes the clock, then low, and the clock catches up
-            again.</p>
-          <p>The bar's color compares usage with elapsed time. The number's color reads usage
-            alone. The two can disagree.</p>
-          <div class="legend">
-            <span class="t">bar · vs time</span>
-            <span class="keys">
+          <div class="cols">
+            <div>
+              <p>The top half of each bar shows usage. The bottom half shows elapsed time. If
+                usage is ahead of time, you run out before the reset, so drop an effort level.
+                If usage is behind, you can raise it.</p>
+              <p>The row under the bar records the effort level for each tenth of the window.
+                In this loop, effort is high until usage passes the clock, then low.</p>
+            </div>
+            <div class="legend">
+              <span class="t">bar color · usage vs time</span>
               <span class="key"><i style="background:var(--green)"></i>behind the clock</span>
               <span class="key"><i style="background:var(--yellow)"></i>level, within 5 points</span>
               <span class="key"><i style="background:var(--red)"></i>ahead of the clock</span>
-            </span>
-            <span class="t">number · usage</span>
-            <span class="keys">
-              <span class="key"><i style="background:var(--green)"></i>under 50%</span>
-              <span class="key"><i style="background:var(--yellow)"></i>50–80%</span>
-              <span class="key"><i style="background:var(--red)"></i>over 80%</span>
-            </span>
+              <span class="t">number color · usage</span>
+              <span class="row">
+                <span class="key"><i style="background:var(--green)"></i>under 50%</span>
+                <span class="key"><i style="background:var(--yellow)"></i>50–80%</span>
+                <span class="key"><i style="background:var(--red)"></i>over 80%</span>
+              </span>
+            </div>
           </div>
           <div class="crop annotated deep">
             <div class="slh" data-crop="0" aria-hidden="true"></div>
