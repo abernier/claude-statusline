@@ -296,6 +296,8 @@ noscript img { display:block; width:100%; height:auto; }
    percentage number reads usage — two rows, one per reading */
 .legend { margin-top:20px; max-width:var(--measure); display:flex; flex-direction:column;
   gap:9px; font-size:12.5px; color:var(--muted); }
+.legend .lead { margin:0 0 3px; color:var(--faint); font-size:12px; line-height:1.7;
+  max-width:60ch; }
 .legend .row { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 20px; }
 .legend .t { flex:0 0 10em; color:var(--faint); font-size:10.5px; letter-spacing:.18em;
   text-transform:uppercase; }
@@ -480,15 +482,18 @@ noscript img { display:block; width:100%; height:auto; }
               alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green."></noscript>
           </div>
           <div class="legend">
-            <div class="row"><span class="t">bar · pace</span>
-              <span class="key"><i style="background:var(--green)"></i>behind the clock</span>
+            <p class="lead">The bar and the number use the same three colors for two different
+              readings. The two are independent — the number can be green while the bar is
+              red.</p>
+            <div class="row"><span class="t">bar · usage vs time</span>
+              <span class="key"><i style="background:var(--green)"></i>behind — quota to spare</span>
               <span class="key"><i style="background:var(--yellow)"></i>level, within 5 points</span>
-              <span class="key"><i style="background:var(--red)"></i>ahead of the clock</span>
+              <span class="key"><i style="background:var(--red)"></i>ahead — runs out early</span>
             </div>
-            <div class="row"><span class="t">number · usage</span>
-              <span class="key"><i style="background:var(--green)"></i>under 50%</span>
-              <span class="key"><i style="background:var(--yellow)"></i>50–80%</span>
-              <span class="key"><i style="background:var(--red)"></i>over 80%</span>
+            <div class="row"><span class="t">number · usage alone</span>
+              <span class="key"><i style="background:var(--green)"></i>under 50% used</span>
+              <span class="key"><i style="background:var(--yellow)"></i>50–80% used</span>
+              <span class="key"><i style="background:var(--red)"></i>over 80% used</span>
             </div>
           </div>
         </section>

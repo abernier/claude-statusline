@@ -149,13 +149,20 @@ behind, you have quota to spare and can raise the effort.
 
 #### Colors
 
-The bar's top half shows pace. The percentage number shows usage.
+The bar and the number use the same three colors for two different readings.
+The two are independent. The number can be green while the bar is red.
 
-| Color  | Bar (pace)              | Number (usage) |
-|--------|-------------------------|----------------|
-| green  | behind the clock        | under 50%      |
-| yellow | level, within 5 points  | 50–80%         |
-| red    | ahead of the clock      | over 80%       |
+The **bar's top half** compares usage with elapsed time (the blue bottom half):
+
+- 🟩 usage is behind elapsed time — you have quota to spare
+- 🟨 usage is level with elapsed time, within 5 points
+- 🟥 usage is ahead of elapsed time — you run out before the reset
+
+The **percentage number** reads usage alone:
+
+- 🟩 under 50% used
+- 🟨 50–80% used
+- 🟥 over 80% used
 
 ### Context window
 
