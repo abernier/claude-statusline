@@ -1,4 +1,4 @@
-// The five loops. Ported straight from the landing-page prototype (ticket #4),
+// The walkthrough loops. Ported straight from the landing-page prototype (ticket #4),
 // which is where these arcs were settled with the human — the page drives the
 // same numbers from JS, so keeping the two in step is what stops the rendered
 // media from disagreeing with the live statusline docked below it.
@@ -260,8 +260,39 @@ const wholeLine: Story = {
   },
 };
 
-/** Walkthrough order — the same order the page's five sections run in. */
-export const STORIES: Story[] = [burn, context, reset, fable, wholeLine];
+/**
+ * 06 — the agent panel. Three subagents fill their own context windows at
+ * their own pace: one finishes early and holds, one climbs into red, one
+ * starts late. The batch finishes near the end and a new one starts, which is
+ * what makes the loop seamless.
+ *
+ * The arc is ported from the page (docs/index.html, story 06) — the ramps,
+ * peaks and the 0.94 turnover are the same numbers. Change one, change the
+ * other. The page's story also creeps the docked line's `ctx`; the render has
+ * no docked line, so only the rows are here.
+ */
+const AGENTS_DONE_AT = 0.94;
+
+const agents: Story = {
+  id: 'agents',
+  slug: 'loop-agents',
+  summary: 'three subagents, each filling its own context window',
+  at: (p) => {
+    const done = p >= AGENTS_DONE_AT;
+    const ramp = (peak: number, from: number, to: number): number =>
+      done ? 0 : peak * Math.max(0, Math.min(1, (p - from) / (to - from)));
+    return {
+      agents: [
+        {name: 'Explore', desc: 'map the repo', ctx: ramp(34, 0, 0.48)},
+        {name: 'verify:bugs', desc: 'refute the findings', ctx: ramp(76, 0.06, 0.9)},
+        {name: 'docs', desc: 'write the changelog', ctx: ramp(22, 0.42, 0.9)},
+      ],
+    };
+  },
+};
+
+/** Walkthrough order — the same order the page's sections run in. */
+export const STORIES: Story[] = [burn, context, reset, fable, wholeLine, agents];
 
 export const storyById = (id: string): Story => {
   const story = STORIES.find((s) => s.id === id);

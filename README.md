@@ -36,7 +36,8 @@ and checks the result.
 Install the statusline from https://github.com/alp82/claude-statusline for me.
 Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
 Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
-points statusLine at ~/.claude/statusline.sh, and tell me what to do next.
+points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
+~/.claude/subagent-statusline.sh, and tell me what to do next.
 ```
 
 Claude reads the installer before it runs it and tells you what changed. Paste
@@ -53,10 +54,10 @@ The same script without the agent:
 curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
 ```
 
-It puts `statusline.sh` into `~/.claude/`, makes it executable, and points
-`settings.json` at it. It copies anything it replaces to `<file>.bak` first.
-Run it again to upgrade. `--no-settings` installs the script only. `--help`
-lists all options.
+It puts `statusline.sh` and `subagent-statusline.sh` into `~/.claude/`, makes
+them executable, and points `settings.json` at them. It copies anything it
+replaces to `<file>.bak` first. Run it again to upgrade. `--no-settings`
+installs the scripts only. `--help` lists all options.
 
 </details>
 
@@ -65,12 +66,14 @@ lists all options.
 
 <br>
 
-One file, nothing else:
+Two files, nothing else:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
   -o ~/.claude/statusline.sh
-chmod +x ~/.claude/statusline.sh
+curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh \
+  -o ~/.claude/subagent-statusline.sh
+chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh
 ```
 
 Then add this to `~/.claude/settings.json`:
@@ -80,6 +83,10 @@ Then add this to `~/.claude/settings.json`:
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "~/.claude/subagent-statusline.sh"
   }
 }
 ```
@@ -93,8 +100,9 @@ The same prompt in reverse:
 ```text
 Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
 Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
-Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
-has a statusLine entry, and show me which .bak files it left behind.
+Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,
+confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,
+and show me which .bak files it left behind.
 ```
 
 <details>
@@ -106,11 +114,11 @@ has a statusLine entry, and show me which .bak files it left behind.
 curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
 ```
 
-It removes `~/.claude/statusline.sh`, the `statusLine` entry in
-`settings.json`, and the cache under `~/.claude/cache/`. It backs up the script
-and `settings.json` as `.bak` first. It changes nothing else, and it leaves the
-entry alone if it points at another statusline. `--no-settings` removes the
-script only.
+It removes both scripts from `~/.claude/`, the `statusLine` and
+`subagentStatusLine` entries in `settings.json`, and the cache under
+`~/.claude/cache/`. It backs up the scripts and `settings.json` as `.bak`
+first. It changes nothing else, and it leaves an entry alone if it points at
+another statusline. `--no-settings` removes the scripts only.
 
 </details>
 
@@ -190,6 +198,20 @@ read can open a Keychain dialog. Click **Always Allow** once and it stops
 asking. To skip the Keychain, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1`. The Fable
 bar then uses only the CLI's own cache.
 
+### The agent panel
+
+When subagents run, Claude Code lists them in a panel below the prompt. The
+second script, `subagent-statusline.sh`, replaces each row with the agent's
+own context bar:
+
+![Three agent rows, each with its own context bar: one holds at 34%, one climbs into red, one starts late and stays green.](docs/assets/loop-agents.gif)
+
+Same palette, same thresholds as the `Ctx` bar: yellow at 25%, red at 50%. A
+subagent near its limit returns thin results, so the red row tells you which
+answer to distrust before it arrives. An agent whose model is not resolved yet
+has no window size, so its row shows the token count only. Needs Claude Code
+v2.1.205 or later.
+
 ## Requirements
 
 - `bash`
@@ -203,6 +225,12 @@ Claude Code sends JSON to the script on stdin
 Fable window comes from that payload. For the Fable quota the script reads the
 CLI's cached copy in `~/.claude.json`. When that copy is stale, it calls
 `/api/oauth/usage` in the background, at most every ten minutes.
+
+The agent panel works the same way: Claude Code sends the visible subagent
+rows to `subagent-statusline.sh` as one JSON object, and the script answers
+with one replacement row per agent.
+
+Changes are listed in the [changelog](CHANGELOG.md).
 
 ## License
 

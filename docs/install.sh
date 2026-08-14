@@ -7,9 +7,10 @@
 # one-liner above short. It is the only copy; the raw.githubusercontent URL
 # (…/main/docs/install.sh) serves the same file.
 #
-# Drops statusline.sh into your Claude Code config dir and points settings.json
-# at it. Idempotent: re-running upgrades in place. Anything it overwrites or
-# removes — including on --uninstall — is backed up next to the original first.
+# Drops statusline.sh and subagent-statusline.sh into your Claude Code config
+# dir and points settings.json at them (statusLine and subagentStatusLine).
+# Idempotent: re-running upgrades in place. Anything it overwrites or removes —
+# including on --uninstall — is backed up next to the original first.
 
 set -euo pipefail
 
@@ -19,11 +20,12 @@ CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 UNINSTALL=0
 
-# Both are cleaned up by one trap, so uninstall (which never fetches) can share
+# All are cleaned up by one trap, so uninstall (which never fetches) can share
 # the settings writer with install without tripping over an unset $tmp.
 tmp=''
+sub_tmp=''
 settings_tmp=''
-trap 'rm -f "$tmp" "$settings_tmp"' EXIT
+trap 'rm -f "$tmp" "$sub_tmp" "$settings_tmp"' EXIT
 
 if [[ -t 1 ]]; then
   BOLD=$'\033[1m'; DIM=$'\033[38;2;138;138;138m'; CLAY=$'\033[38;2;217;119;87m'
@@ -49,11 +51,12 @@ ${BOLD}claude-statusline installer${RESET}
 Options:
   --dir <path>     Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
   --ref <ref>      branch or tag to install from (default: $REF)
-  --no-settings    install the script only; print the settings.json snippet
-                   instead of writing it. With --uninstall, remove the script
+  --no-settings    install the scripts only; print the settings.json snippet
+                   instead of writing it. With --uninstall, remove the scripts
                    but leave settings.json alone.
-  --uninstall      remove statusline.sh and drop the statusLine entry from
-                   settings.json, backing both up first
+  --uninstall      remove both scripts and drop the statusLine and
+                   subagentStatusLine entries from settings.json, backing
+                   everything up first
   -h, --help       this help
 EOF
 }
@@ -103,8 +106,10 @@ for dep in "${deps[@]}"; do
 done
 
 TARGET="$CONFIG_DIR/statusline.sh"
+SUB_TARGET="$CONFIG_DIR/subagent-statusline.sh"
 SETTINGS="$CONFIG_DIR/settings.json"
 SOURCE_URL="https://raw.githubusercontent.com/$REPO/$REF/statusline.sh"
+SUB_SOURCE_URL="https://raw.githubusercontent.com/$REPO/$REF/subagent-statusline.sh"
 
 # A symlinked settings.json means a dotfile manager (stow/chezmoi/yadm) owns it.
 # Unlike $TARGET below, follow this one: it points at the user's own config, so
@@ -120,14 +125,21 @@ fi
 # has to arrive quoted, or the shell word-splits it and the statusline silently
 # never renders. Paths needing no quoting stay bare, so existing installs still
 # compare equal and re-running remains a no-op.
-if [[ $TARGET == *[^A-Za-z0-9._/-]* ]]; then
-  CMD="'${TARGET//\'/\'\\\'\'}'"
-else
-  CMD=$TARGET
-fi
+shellquote() {
+  if [[ $1 == *[^A-Za-z0-9._/-]* ]]; then
+    printf "'%s'" "${1//\'/\'\\\'\'}"
+  else
+    printf '%s' "$1"
+  fi
+}
+CMD=$(shellquote "$TARGET")
+SUB_CMD=$(shellquote "$SUB_TARGET")
 
 settings_snippet() {
-  jq -n --arg cmd "$CMD" '{statusLine: {type: "command", command: $cmd}}'
+  jq -n --arg cmd "$CMD" --arg sub "$SUB_CMD" '{
+    statusLine: {type: "command", command: $cmd},
+    subagentStatusLine: {type: "command", command: $sub}
+  }'
 }
 
 # Rewrite settings.json through the given jq program, atomically. Args are
@@ -162,18 +174,20 @@ is_ours() {
 # --- uninstall ---------------------------------------------------------------
 if (( UNINSTALL )); then
   changed=0
-  # -L before -e: a symlink to a deleted target fails -e, and leaving it behind
-  # would keep Claude Code running a statusLine command that cannot resolve.
-  if [[ -L $TARGET || -e $TARGET ]]; then
-    # Same rule as installing: never destroy what was there without a copy. cp -P
-    # keeps a symlink a symlink, so the path it pointed at survives in the backup.
-    cp -Pp "$TARGET" "$TARGET.bak"
-    rm -f "$TARGET"
-    ok "removed $TARGET ${DIM}(backup: $TARGET.bak)${RESET}"
-    changed=1
-  else
-    step "no script at $TARGET"
-  fi
+  for t in "$TARGET" "$SUB_TARGET"; do
+    # -L before -e: a symlink to a deleted target fails -e, and leaving it behind
+    # would keep Claude Code running a statusLine command that cannot resolve.
+    if [[ -L $t || -e $t ]]; then
+      # Same rule as installing: never destroy what was there without a copy. cp -P
+      # keeps a symlink a symlink, so the path it pointed at survives in the backup.
+      cp -Pp "$t" "$t.bak"
+      rm -f "$t"
+      ok "removed $t ${DIM}(backup: $t.bak)${RESET}"
+      changed=1
+    else
+      step "no script at $t"
+    fi
+  done
 
   if (( ! PATCH_SETTINGS )); then
     step "leaving $SETTINGS alone (--no-settings)"
@@ -208,6 +222,21 @@ if (( UNINSTALL )); then
     fi
   fi
 
+  # The subagentStatusLine entry ships with the same install, so it goes the
+  # same way — but only when it still points at our script.
+  if (( PATCH_SETTINGS )) && [[ -f $SETTINGS ]]; then
+    sub_current=$(jq -r '.subagentStatusLine.command // ""' "$SETTINGS" 2>/dev/null) || sub_current=''
+    if [[ -n $sub_current && $sub_current == "$SUB_CMD" ]]; then
+      [[ -f $SETTINGS.bak ]] || cp -p "$SETTINGS" "$SETTINGS.bak"
+      write_settings 'del(.subagentStatusLine)'
+      ok "unwired subagentStatusLine from $SETTINGS"
+      changed=1
+    elif [[ -n $sub_current ]]; then
+      warn "$SETTINGS points subagentStatusLine at something else — leaving it alone:"
+      warn "  $sub_current"
+    fi
+  fi
+
   # The only state the statusline creates on its own: the throttled Fable-usage
   # fetch. statusline.sh hardcodes these under $HOME, so --dir does not move
   # them. Regenerable, so they go without a backup.
@@ -231,37 +260,50 @@ if (( UNINSTALL )); then
 fi
 
 # --- fetch ------------------------------------------------------------------
-tmp=$(mktemp)
+fetch() {
+  local url=$1 dest=$2
+  curl -fsSL --connect-timeout 10 --max-time 120 "$url" -o "$dest" \
+    || die "download failed: $url"
+  [[ -s $dest ]] || die "downloaded an empty file from $url"
+  head -n 1 "$dest" | grep -q '^#!/usr/bin/env bash$' \
+    || die "$url did not look like a statusline script"
+}
 
+tmp=$(mktemp)
+sub_tmp=$(mktemp)
 step "fetching statusline.sh @ $REF"
-curl -fsSL --connect-timeout 10 --max-time 120 "$SOURCE_URL" -o "$tmp" \
-  || die "download failed: $SOURCE_URL"
-[[ -s $tmp ]] || die "downloaded an empty file from $SOURCE_URL"
-head -n 1 "$tmp" | grep -q '^#!/usr/bin/env bash$' \
-  || die "$SOURCE_URL did not look like the statusline script"
+fetch "$SOURCE_URL" "$tmp"
+step "fetching subagent-statusline.sh @ $REF"
+fetch "$SUB_SOURCE_URL" "$sub_tmp"
 
 # --- install ----------------------------------------------------------------
 # 0700: the config dir holds settings.json, which routinely carries API keys.
 mkdir -p -m 700 "$CONFIG_DIR"
 
-if [[ -L $TARGET ]]; then
-  # The old README recipe symlinked this at a git clone. Writing through the
-  # link would clobber the clone (including uncommitted work), so break it
-  # instead — but say so, because that clone stops being what Claude Code loads.
-  # cp -P copies the link rather than its target, so the path it pointed at is
-  # recoverable from the backup and nothing in the clone is touched.
-  cp -Pp "$TARGET" "$TARGET.bak"
-  warn "$TARGET was a symlink → $(readlink "$TARGET")"
-  warn "replacing it with a real file; that path is no longer what Claude Code loads."
-  step "backed up the symlink → $TARGET.bak"
-elif [[ -e $TARGET ]] && ! cmp -s "$tmp" "$TARGET"; then
-  cp -p "$TARGET" "$TARGET.bak"
-  step "backed up existing script → $TARGET.bak"
-fi
-rm -f "$TARGET"
-cp "$tmp" "$TARGET"
-chmod +x "$TARGET"
-ok "installed $TARGET"
+install_script() {
+  local src=$1 target=$2
+  if [[ -L $target ]]; then
+    # The old README recipe symlinked this at a git clone. Writing through the
+    # link would clobber the clone (including uncommitted work), so break it
+    # instead — but say so, because that clone stops being what Claude Code loads.
+    # cp -P copies the link rather than its target, so the path it pointed at is
+    # recoverable from the backup and nothing in the clone is touched.
+    cp -Pp "$target" "$target.bak"
+    warn "$target was a symlink → $(readlink "$target")"
+    warn "replacing it with a real file; that path is no longer what Claude Code loads."
+    step "backed up the symlink → $target.bak"
+  elif [[ -e $target ]] && ! cmp -s "$src" "$target"; then
+    cp -p "$target" "$target.bak"
+    step "backed up existing script → $target.bak"
+  fi
+  rm -f "$target"
+  cp "$src" "$target"
+  chmod +x "$target"
+  ok "installed $target"
+}
+
+install_script "$tmp" "$TARGET"
+install_script "$sub_tmp" "$SUB_TARGET"
 
 # --- settings ---------------------------------------------------------------
 wired=0
@@ -297,19 +339,27 @@ if (( PATCH_SETTINGS )); then
     settings_snippet
   else
     current=$(jq -r '.statusLine.command // ""' "$SETTINGS")
+    sub_current=$(jq -r '.subagentStatusLine.command // ""' "$SETTINGS")
     # a previous install (or the old README recipe) may have written the tilde form
-    if is_ours "$current"; then
-      ok "settings.json already points at it"
+    if is_ours "$current" && [[ $sub_current == "$SUB_CMD" ]]; then
+      ok "settings.json already points at both"
       wired=1
     else
       note=''
       if (( had_settings )); then
         cp -p "$SETTINGS" "$SETTINGS.bak"
         note=" ${DIM}(backup: $SETTINGS.bak)${RESET}"
-        [[ -n $current ]] && step "replacing existing statusLine command ($current)"
+        if [[ -n $current ]] && ! is_ours "$current"; then
+          step "replacing existing statusLine command ($current)"
+        fi
+        if [[ -n $sub_current && $sub_current != "$SUB_CMD" ]]; then
+          step "replacing existing subagentStatusLine command ($sub_current)"
+        fi
       fi
-      write_settings -n --arg cmd "$CMD" \
-        'input? // {} | .statusLine = {type: "command", command: $cmd}'
+      write_settings -n --arg cmd "$CMD" --arg sub "$SUB_CMD" \
+        'input? // {}
+         | .statusLine = {type: "command", command: $cmd}
+         | .subagentStatusLine = {type: "command", command: $sub}'
       ok "wired up $SETTINGS$note"
       wired=1
     fi

@@ -6,7 +6,7 @@ import {Social} from './Social';
 import {LOOP_COMPOSITIONS, LOOP_FPS, LOOP_FRAMES, SOCIAL} from './compositions';
 
 /**
- * The five walkthrough loops and the social-preview still (#6), plus the #3
+ * The walkthrough loops and the social-preview still (#6), plus the #3
  * scaffold, kept as the foundation smoke test.
  *
  * Every loop is seamless by construction: `Loop` derives its progress from

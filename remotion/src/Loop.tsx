@@ -1,5 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AgentPanel} from './statusline/AgentPanel';
 import {Annotation, annotationFontSize, headroom} from './statusline/Annotation';
 import {Statusline} from './statusline/Statusline';
 import {STILL_PROGRESS, storyById} from './stories';
@@ -86,7 +87,11 @@ export const Loop: React.FC<LoopProps> = ({
             marginBottom: room.below,
           }}
         >
-          <Statusline state={state} fontSize={fontSize} glow={story.glow ?? []} />
+          {state.agents ? (
+            <AgentPanel rows={state.agents} fontSize={fontSize} />
+          ) : (
+            <Statusline state={state} fontSize={fontSize} glow={story.glow ?? []} />
+          )}
           {race ? (
             <Annotation
               state={state}

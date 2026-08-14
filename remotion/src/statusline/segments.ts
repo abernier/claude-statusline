@@ -1,5 +1,12 @@
 import {colors, ctxColor, paceColor, pctColor} from '../theme';
-import type {LimitWindow, Part, Segment, SegmentId, StatuslineState} from './types';
+import type {
+  AgentRow,
+  LimitWindow,
+  Part,
+  Segment,
+  SegmentId,
+  StatuslineState,
+} from './types';
 
 /** now / 45m / 7h9m / 3d10h — mirrors fmt_reset in statusline.sh. */
 export const fmtReset = (seconds: number): string => {
@@ -142,6 +149,27 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
     segments.push(limitSegment('fable', 'Fable', state.fable, false));
 
   return segments;
+};
+
+/**
+ * One agent-panel row, as subagent-statusline.sh draws it: name in the
+ * directory blue, the agent's own context bar and percentage on ctx
+ * thresholds, the token count, then ` · ` and the description in dim. The
+ * name is padded to a fixed column so the rows' bars align, and the tokens
+ * are the same reading as the percentage, derived against a 1M window.
+ */
+export const buildAgentRow = (row: AgentRow, nameCells: number): Part[] => {
+  const pct = Math.round(row.ctx);
+  const color = ctxColor(pct);
+  return [
+    {kind: 'text', text: row.name.padEnd(nameCells), color: colors.dir},
+    {kind: 'text', text: ' ', color: colors.dim},
+    {kind: 'bar', pct, width: BAR_CELLS, color},
+    {kind: 'text', text: ` ${pctField(pct)}`, color},
+    {kind: 'text', text: ` ${tokensField((pct / 100) * 1000000)}`, color: colors.dim},
+    {kind: 'text', text: ' · ', color: colors.sep},
+    {kind: 'text', text: row.desc, color: colors.dim},
+  ];
 };
 
 /** ` │ ` — the separator the script puts between segments. */

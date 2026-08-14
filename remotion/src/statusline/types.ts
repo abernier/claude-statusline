@@ -21,6 +21,14 @@ export type LimitWindow = {
   resetsIn?: number;
 };
 
+/** One row of the agent panel, as subagent-statusline.sh draws it. */
+export type AgentRow = {
+  name: string;
+  /** The agent's own context usage, 0–100. Tokens are derived from it. */
+  ctx: number;
+  desc: string;
+};
+
 /**
  * Everything the statusline can show. Every field is optional the same way the
  * script's segments are conditional — omit one and the segment disappears,
@@ -38,4 +46,6 @@ export type StatuslineState = {
   five?: LimitWindow;
   week?: LimitWindow;
   fable?: LimitWindow;
+  /** Agent-panel rows. A state with rows renders the panel, not the line. */
+  agents?: AgentRow[];
 };

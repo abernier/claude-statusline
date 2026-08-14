@@ -122,6 +122,15 @@ a { color:inherit; }
 .bar.plain .fill { position:absolute; left:0; top:0; bottom:0; }
 .overshoot { box-shadow:0 0 .16em currentColor; }
 
+/* ================= the agent panel =================
+   subagent-statusline.sh draws one row per running agent. A row reuses the
+   line's own pieces: the plain bar and the pct/tok columns. */
+.agents { display:grid; row-gap:.85em; }
+.agents .arow { gap:.6em; }
+.agents .aname { color:var(--dirc); min-width:7em; }
+.agents .adesc { color:var(--dim); }
+.agents .adesc .dot { color:var(--sep); padding-right:.5em; }
+
 /* ================= the Claude Code TUI ================= */
 .tui { container-type:inline-size; font-size:13px; }
 .tui-head { display:flex; gap:18px; align-items:flex-start; padding:26px var(--pad) 16px; }
@@ -419,6 +428,7 @@ noscript img { display:block; width:100%; height:auto; }
       <a href="#s2" data-step="2"><i>03</i>When a window resets</a>
       <a href="#s3" data-step="3"><i>04</i>The Fable window</a>
       <a href="#s4" data-step="4"><i>05</i>What is on the line</a>
+      <a href="#s5" data-step="5"><i>06</i>The agent panel</a>
     </nav>
     <div class="grp">Reference</div>
     <nav>
@@ -454,12 +464,13 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="ib paste" data-copy-surface>
             <div class="ib-head">
               <span class="ib-lbl">The prompt for Claude Code</span>
-              <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+              <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
             </div>
             <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
-  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+  points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
+  ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
           </div>
           <div class="after">
             <span>Paste it into Claude Code and press return.</span>
@@ -559,6 +570,23 @@ noscript img { display:block; width:100%; height:auto; }
           </div>
         </section>
 
+        <section class="step" id="s5" data-i="5" data-hue="#4ea895"
+                 data-cap="# each agent burns its own window" style="--stepc:#4ea895">
+          <div class="n">06</div>
+          <h2>The agent panel</h2>
+          <p>When subagents run, Claude Code lists them below the prompt. A second script,
+            subagent-statusline.sh, gives each row its own context bar, with the same
+            thresholds as Ctx. A red row returns a thin answer, and the bar tells you before
+            the answer arrives.</p>
+          <p>The main line barely moves while they work: each agent burns its own window,
+            and your context stays clean.</p>
+          <div class="crop">
+            <div class="slh" data-crop="5" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-agents.gif" width="1240" height="330"
+              alt="Three agent rows, each with its own context bar: one holds at 34%, one climbs into red, one starts late and stays green."></noscript>
+          </div>
+        </section>
+
         <section class="tail" id="install">
           <h2>Install</h2>
 
@@ -577,12 +605,13 @@ noscript img { display:block; width:100%; height:auto; }
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
-                <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
-  points statusLine at ~/.claude/statusline.sh, and tell me what to do next.</pre>
+  points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
+  ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
               <div class="note">Claude reads the installer before it runs it and tells you what
                 changed. Paste it again to upgrade.</div>
             </div>
@@ -594,31 +623,35 @@ noscript img { display:block; width:100%; height:auto; }
               </div>
               <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
               <div class="note">The same script without the agent. It puts <code>statusline.sh</code>
-                into <code>~/.claude/</code> and points <code>settings.json</code> at it, with a
-                backup of anything it replaces. Run it again to upgrade.
-                <code>--no-settings</code> installs the script only. <code>--help</code> lists all
-                options.</div>
+                and <code>subagent-statusline.sh</code> into <code>~/.claude/</code> and points
+                <code>settings.json</code> at them, with a backup of anything it replaces. Run it
+                again to upgrade. <code>--no-settings</code> installs the scripts only.
+                <code>--help</code> lists all options.</div>
             </div>
 
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>03</b>Or install it by hand</span>
-                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh&#10;curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh -o ~/.claude/subagent-statusline.sh&#10;chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
     -o ~/.claude/statusline.sh
-$ chmod +x ~/.claude/statusline.sh</pre>
-              <div class="note">One file, nothing else. Then add the settings below yourself.</div>
+$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh \
+    -o ~/.claude/subagent-statusline.sh
+$ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
+              <div class="note">Two files, nothing else. Then add the settings below yourself.</div>
             </div>
 
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>04</b>Point Claude Code at it</span>
-                <button class="btn" data-copy='{ "statusLine": { "type": "command", "command": "~/.claude/statusline.sh" } }'><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy='{ "statusLine": { "type": "command", "command": "~/.claude/statusline.sh" }, "subagentStatusLine": { "type": "command", "command": "~/.claude/subagent-statusline.sh" } }'><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre><span class="c">// ~/.claude/settings.json</span>
 { <span class="k">"statusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
-    <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> } }</pre>
+    <span class="k">"command"</span>: <span class="s">"~/.claude/statusline.sh"</span> },
+  <span class="k">"subagentStatusLine"</span>: { <span class="k">"type"</span>: <span class="s">"command"</span>,
+    <span class="k">"command"</span>: <span class="s">"~/.claude/subagent-statusline.sh"</span> } }</pre>
               <div class="note">The prompt and the installer write this for you. You need it only
                 after a manual install or <code>--no-settings</code>.</div>
             </div>
@@ -630,19 +663,20 @@ $ chmod +x ~/.claude/statusline.sh</pre>
           </div><!-- /p-add -->
 
           <div class="tabpanel" id="p-rm" role="tabpanel" aria-labelledby="t-rm">
-          <p class="intro">The same prompt in reverse. It removes the script and the
-            <code>statusLine</code> entry, and leaves a backup of each.</p>
+          <p class="intro">The same prompt in reverse. It removes both scripts and their
+            settings entries, and leaves a backup of each.</p>
           <div class="install">
 
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
-                <button class="btn" data-copy="Uninstall the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall&#10;Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer&#10;has a statusLine entry, and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="Uninstall the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall&#10;Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,&#10;confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,&#10;and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre><span class="p">&gt;</span> Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
-  Then confirm ~/.claude/statusline.sh is gone and ~/.claude/settings.json no longer
-  has a statusLine entry, and show me which .bak files it left behind.</pre>
+  Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,
+  confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,
+  and show me which .bak files it left behind.</pre>
               <div class="note">Claude runs it and tells you where the backups are.</div>
             </div>
 
@@ -652,12 +686,12 @@ $ chmod +x ~/.claude/statusline.sh</pre>
                 <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall</pre>
-              <div class="note">Removes <code>~/.claude/statusline.sh</code>, the
-                <code>statusLine</code> entry in <code>settings.json</code>, and the cached usage
-                numbers. It backs up the script and <code>settings.json</code> as
-                <code>.bak</code> first. It changes nothing else, and it leaves the entry alone if
-                it points at another statusline. <code>--no-settings</code> removes the script
-                only.</div>
+              <div class="note">Removes both scripts from <code>~/.claude/</code>, the
+                <code>statusLine</code> and <code>subagentStatusLine</code> entries in
+                <code>settings.json</code>, and the cached usage numbers. It backs up the scripts
+                and <code>settings.json</code> as <code>.bak</code> first. It changes nothing
+                else, and it leaves an entry alone if it points at another statusline.
+                <code>--no-settings</code> removes the scripts only.</div>
             </div>
 
           </div>
@@ -790,6 +824,18 @@ function statusline(o = {}) {
   return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
 }
 
+/* the agent panel, as subagent-statusline.sh draws it: one row per agent,
+   name · its own context bar · pct · tokens · description */
+function agentPanel(o = {}) {
+  const rows = (o.agents ?? []).map(a => {
+    const v = Math.round(a.ctx), c = ctxColor(v);
+    return `<div class="sl arow">
+      <span class="aname">${a.name}</span>${plainBar(v, c)}<span class="pct" style="color:${c}">${v}%</span><span class="tok">${fmtTokens(v)}</span><span class="adesc"><span class="dot">·</span>${a.desc}</span>
+    </div>`;
+  });
+  return `<div class="agents" style="font-size:clamp(9px,2.9cqi,24px)">${rows.join('')}</div>`;
+}
+
 /* ================= the five loops =================
    Ported from remotion/src/stories.ts — the rendered media in docs/assets/ is
    these same arcs, so the two files have to be changed together. Every story
@@ -866,12 +912,30 @@ const STORIES = [
             week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED + fiveT * FIVE_WINDOW / WEEK_WINDOW,
             fable: 7 + cyc(p, 26, 0.95)};
   },
+  /* 06 — three subagents fill their own windows at their own pace while the
+     main line's Ctx barely moves; the batch finishes and a new one starts,
+     which is what makes it loop. Ported to stories.ts as `agents` — the ramps,
+     peaks and the 0.94 turnover are the same numbers. Change one, change the
+     other. */
+  p => {
+    const done = p >= 0.94;
+    const ramp = (peak, a, b) =>
+      done ? 0 : peak * Math.max(0, Math.min(1, (p - a) / (b - a)));
+    return {
+      ctx: 12 + (done ? 0 : 4 * (p / 0.94)),
+      agents: [
+        {name: 'Explore',     desc: 'map the repo',         ctx: ramp(34, 0.00, 0.48)},
+        {name: 'verify:bugs', desc: 'refute the findings',  ctx: ramp(76, 0.06, 0.90)},
+        {name: 'docs',        desc: 'write the changelog',  ctx: ramp(22, 0.42, 0.90)},
+      ],
+    };
+  },
 ];
 
 /* what each crop frames, and which segment the docked line keeps lit */
 const CROPS = [{only:'five'}, {only:'ctx'}, {only:'five'}, {only:'fable'},
-               {compact:true, k:1.35, cap:18}];
-const FOCUS = ['five', 'ctx', 'five', 'fable', null];
+               {compact:true, k:1.35, cap:18}, {panel:true}];
+const FOCUS = ['five', 'ctx', 'five', 'fable', null, 'ctx'];
 
 /* ================= behaviour ================= */
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1031,7 +1095,7 @@ function annotate(i, s) {
 const paint = p => {
   crops.forEach((holder, i) => {
     const s = STORIES[i](p);
-    holder.innerHTML = statusline({...CROPS[i], ...s});
+    holder.innerHTML = CROPS[i].panel ? agentPanel(s) : statusline({...CROPS[i], ...s});
     /* the annotation reads fields a story may leave alone, so it gets the
        filled-in line rather than the story's own partial */
     annotate(i, {...DEFAULTS, ...s});

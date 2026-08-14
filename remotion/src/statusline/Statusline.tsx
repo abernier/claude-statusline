@@ -5,7 +5,7 @@ import {buildSegments, layout, partCells, SEPARATOR_CELLS} from './segments';
 import type {Part, SegmentId, StatuslineState} from './types';
 
 /** One glyph per cell, absolutely placed — the grid never drifts with the font. */
-const TextRun: React.FC<{
+export const TextRun: React.FC<{
   text: string;
   color: string;
   cellWidth: number;

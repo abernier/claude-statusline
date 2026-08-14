@@ -21,7 +21,7 @@ ENTRY=src/index.ts
 OUT=../docs/assets
 
 # Keep in step with src/compositions.ts, which is where the geometry lives.
-LOOPS=(loop-burn loop-context loop-reset loop-fable loop-whole-line)
+LOOPS=(loop-burn loop-context loop-reset loop-fable loop-whole-line loop-agents)
 STILLS=(social-preview)
 
 mkdir -p "$OUT"
