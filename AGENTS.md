@@ -8,6 +8,10 @@ A single-file Bash statusline for Claude Code (`statusline.sh`).
 
 The annotation over a bar — the racers named, the gap read out, the effort row — is drawn twice: by `annotate()` in `docs/index.html` and by `remotion/src/statusline/Annotation.tsx`. The page measures the painted bar, the render computes it from `theme.ts`, and both carry the same pixel constants. Change one, change the other.
 
+## Update guide
+
+For every day where changes are made, update CHANGELOG.md.
+
 ## Agent skills
 
 ### Issue tracker

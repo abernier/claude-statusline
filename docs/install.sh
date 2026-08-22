@@ -44,6 +44,8 @@ usage() {
   cat <<EOF
 ${BOLD}claude-statusline installer${RESET}
 
+Installs the statusline, or updates it in place if you already have it.
+
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall

@@ -4,6 +4,15 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-08-22
+
+### Changed
+
+- The install prompt now reads "Install or update the statusline …", and the
+  README and landing page say plainly that the same prompt does both: paste it
+  the first time to install, paste it again for the latest version. The
+  installer's `--help` says the same.
+
 ## 2026-08-14
 
 ### Added

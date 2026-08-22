@@ -464,16 +464,17 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="ib paste" data-copy-surface>
             <div class="ib-head">
               <span class="ib-lbl">The prompt for Claude Code</span>
-              <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+              <button class="btn" data-copy="Install or update the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
             </div>
-            <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+            <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/alp82/claude-statusline for me.
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
   points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
   ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
           </div>
           <div class="after">
-            <span>Paste it into Claude Code and press return.</span>
+            <span>Paste it into Claude Code and press return. The same prompt installs it,
+              and updates it later.</span>
             <a href="#install">Install it by hand</a>
             <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
           </div>
@@ -588,7 +589,7 @@ noscript img { display:block; width:100%; height:auto; }
         </section>
 
         <section class="tail" id="install">
-          <h2>Install</h2>
+          <h2>Install or update</h2>
 
           <div class="tabs" role="tablist" aria-label="Install or uninstall">
             <button class="tab on" role="tab" id="t-add" aria-controls="p-add"
@@ -598,22 +599,24 @@ noscript img { display:block; width:100%; height:auto; }
           </div>
 
           <div class="tabpanel on" id="p-add" role="tabpanel" aria-labelledby="t-add">
-          <p class="intro">Paste one prompt into Claude Code. Claude installs the script, updates
-            the settings, and checks the result.</p>
+          <p class="intro">One prompt does both. Paste it into Claude Code the first time to
+            install the statusline, and paste the same prompt again any time you want the latest
+            version. Claude installs or replaces the scripts, updates the settings, and checks
+            the result.</p>
           <div class="install">
 
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
-                <button class="btn" data-copy="Install the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="Install or update the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre><span class="p">&gt;</span> Install the statusline from https://github.com/alp82/claude-statusline for me.
+              <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/alp82/claude-statusline for me.
   Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
   points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
   ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
               <div class="note">Claude reads the installer before it runs it and tells you what
-                changed. Paste it again to upgrade.</div>
+                changed.</div>
             </div>
 
             <div class="ib">
@@ -622,10 +625,10 @@ noscript img { display:block; width:100%; height:auto; }
                 <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
               <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
-              <div class="note">The same script without the agent. It puts <code>statusline.sh</code>
-                and <code>subagent-statusline.sh</code> into <code>~/.claude/</code> and points
-                <code>settings.json</code> at them, with a backup of anything it replaces. Run it
-                again to upgrade. <code>--no-settings</code> installs the scripts only.
+              <div class="note">The same script without the agent, and the same either way: it
+                puts <code>statusline.sh</code> and <code>subagent-statusline.sh</code> into
+                <code>~/.claude/</code> and points <code>settings.json</code> at them, with a backup
+                of anything it replaces. Run it again whenever you want the latest version. <code>--no-settings</code> installs the scripts only.
                 <code>--help</code> lists all options.</div>
             </div>
 

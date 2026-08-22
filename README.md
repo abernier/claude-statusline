@@ -27,28 +27,30 @@ on the same line, under the prompt.
 
 ---
 
-## Install
+## Install or update
 
-Paste this into Claude Code. Claude installs the script, updates the settings,
-and checks the result.
+One prompt does both. Paste it into Claude Code the first time to install the
+statusline, and paste the same prompt again any time you want the latest
+version. Claude installs or replaces the scripts, updates the settings, and
+checks the result.
 
 ```text
-Install the statusline from https://github.com/alp82/claude-statusline for me.
+Install or update the statusline from https://github.com/alp82/claude-statusline for me.
 Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
 Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
 points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
 ~/.claude/subagent-statusline.sh, and tell me what to do next.
 ```
 
-Claude reads the installer before it runs it and tells you what changed. Paste
-it again to upgrade.
+Claude reads the installer before it runs it and tells you what changed.
 
 <details>
 <summary>Or run the installer yourself</summary>
 
 <br>
 
-The same script without the agent:
+The same script without the agent. It installs the statusline, and updates it
+if you already have it:
 
 ```sh
 curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
