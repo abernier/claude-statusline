@@ -249,10 +249,11 @@ bar then uses only the CLI's own cache.
 
 ### Repo and git state
 
-![The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and what changed in the tree follows it.](docs/assets/loop-line-start.gif)
+![The first row of the statusline: the folder and the branch hold still on the left while the working-tree counts fill up on the right — files modified, added, deleted and untracked, then the lines — until a commit empties them and the count starts again. The gap between the two never closes.](docs/assets/loop-line-start.gif)
 
 The first row answers what you are working on and what you have done to it: the
-folder, the branch, how many files changed by kind, and how many lines. Long
+folder and the branch on the left, then how many files changed by kind and how
+many lines, pushed right so that its edge lands where the second row ends. Long
 folder and branch names are cut to fit; the counts keep their room.
 
 ## Requirements

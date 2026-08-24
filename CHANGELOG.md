@@ -44,10 +44,10 @@ number would.
   rows, drops the typed narration above the prompt, and boxes the prompt the way
   Claude Code does.
 - **The rendered loops follow too.** `loop-line-start` is now the whole first
-  row: the branch still outgrows its budget and elides, and the file and line
-  counts sit on the right, holding their column while it does. The mockup grew
-  a `git` segment and a space-between layout to draw it. Every other loop
-  re-rendered byte-identical.
+  row: the folder and the branch hold still while the working-tree counts fill
+  up on the right, until a commit empties them. The mockup grew a `git` segment
+  and a space-between layout to draw it. Every other loop re-rendered
+  byte-identical.
 - **Model names are shortened.** A leading `Claude ` is dropped and
   ` (1M context)` becomes ` 1M`, so `Opus 5 (1M context)` reads `Opus 5 1M`.
   The panel derives the same name from the model id the CLI sends there.

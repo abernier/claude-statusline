@@ -3,7 +3,7 @@
 // same numbers from JS, so keeping the two in step is what stops the rendered
 // media from disagreeing with the live statusline docked below it.
 
-import type {SegmentId, StatuslineState} from './statusline/types';
+import type {GitState, SegmentId, StatuslineState} from './statusline/types';
 
 /** Window lengths in seconds, as statusline.sh uses them. */
 export const FIVE_WINDOW = 5 * 3600;
@@ -210,59 +210,60 @@ const agents: Story = {
 };
 
 /**
- * 05 — repo and git state: the whole first row. A branch name types itself out
- * until the folder and the branch run out of budget and the ladder starts
- * eliding, then the folder changes and a different tree's counts come with it.
+ * 05 — repo and git state: the whole first row.
  *
- * Ported from the page (docs/index.html, story 05) — the cue points are the
- * same numbers. Change one, change the other. The page's copy of the story also
- * carries a model and an effort, because its docked line draws the second row
- * too; this loop is the first row alone, so it carries neither. The trimming
- * itself is not in here: `fitLocation()` in segments.ts does it, the way the
- * script does.
+ * The folder and the branch hold still. They are the answer to "where am I",
+ * and that does not change while you work, so the only thing moving here is the
+ * tree: files are touched, new ones appear, lines pile up, and at `COMMIT_AT`
+ * it is all committed and the count starts again — which is what makes the loop
+ * seamless. Neither name is ever shortened either: this section is about the
+ * shape of the row, and an eliding name would be a second thing to watch.
+ *
+ * The location is anchored left and the counts right, so the counts grow
+ * leftward into the gap and their right edge never moves. That gap is the point
+ * of the loop.
+ *
+ * Ported from the page (docs/index.html, story 05) — the same names and the
+ * same ramp. Change one, change the other.
  */
-const LONG_BRANCH = 'feature/context-window-bar-redesign';
-/** Where the typing stops, the effort drops, the project changes, and the loop seams. */
-const TYPED_AT = 0.46;
-const SWITCH_AT = 0.76;
-const START_SEAM_AT = 0.94;
-
 /**
  * The cell count the row spreads over — the row's width on every frame, so the
- * folder never moves and neither do the counts. It has to clear the widest
- * frame or the row falls back to packing left and jumps: the location takes the
- * whole 34-cell budget and the widest counts here are 35 cells, so 34 + 35
- * leaves a four-cell gap at the tightest moment of the loop.
+ * folder never moves and neither does the counts' right edge. It has to clear
+ * the widest frame or the row falls back to packing left and jumps: the
+ * location is a fixed 34 cells and the fullest tree here is 36, so 34 + 36
+ * leaves a gap that is 16 cells at its tightest and never closes.
  */
-const HEAD_CELLS = 34 + 35 + 4;
+const HEAD_CELLS = 34 + 36 + 16;
 
-/**
- * The tree the loop starts in, and the one it changes to at the switch. The
- * first is the same state the page's docked line shows (DEFAULTS in
- * docs/index.html) — change one, change the other.
- */
-const OWN_TREE = {add: 1, mod: 4, del: 1, untracked: 1, insertions: 232, deletions: 54};
-const OTHER_TREE = {add: 2, mod: 9, del: 1, insertions: 1204, deletions: 318};
+/** 17 + ` ⎇ ` 3 + 14 is exactly the 34-cell budget, so neither name is cut. */
+const REPO_DIR = 'claude-statusline';
+const REPO_BRANCH = 'two-row-layout';
+/** Where the working tree is committed and the count starts again. */
+const COMMIT_AT = 0.9;
+/** What is left right after the commit — and where the loop starts. */
+const COMMITTED: GitState = {mod: 1, insertions: 12, deletions: 3};
 
 const lineStart: Story = {
   id: 'line-start',
   slug: 'loop-line-start',
-  summary: 'a branch name outgrowing its budget, beside what changed in the tree',
+  summary: 'a working tree filling up beside a folder and branch that hold still',
   spreadTo: HEAD_CELLS,
   at: (p) => {
-    const head = {dir: 'claude-statusline', branch: 'main', git: OWN_TREE};
-    if (p >= START_SEAM_AT) return head;
-    if (p >= SWITCH_AT) {
-      return {
-        ...head,
-        dir: 'acme-platform-web-frontend',
-        branch: LONG_BRANCH,
-        git: OTHER_TREE,
-      };
-    }
-    if (p >= TYPED_AT) return {...head, branch: LONG_BRANCH};
-    const typed = Math.round(4 + (LONG_BRANCH.length - 4) * (p / TYPED_AT));
-    return {...head, branch: LONG_BRANCH.slice(0, Math.max(4, typed))};
+    if (p >= COMMIT_AT)
+      return {dir: REPO_DIR, branch: REPO_BRANCH, git: COMMITTED};
+    const q = Math.min(1, p / COMMIT_AT);
+    return {
+      dir: REPO_DIR,
+      branch: REPO_BRANCH,
+      git: {
+        add: q >= 0.35 ? 1 : 0,
+        mod: 1 + Math.floor(5 * q),
+        del: q >= 0.62 ? 1 : 0,
+        untracked: Math.min(2, Math.floor(3 * q)),
+        insertions: Math.round(12 + 475 * q),
+        deletions: Math.round(3 + 109 * q),
+      },
+    };
   },
 };
 

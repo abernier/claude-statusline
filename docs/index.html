@@ -113,10 +113,11 @@ a { color:inherit; }
 .sl .dot { color:var(--sep); }
 .sl .eff { color:var(--dim); }
 .sl .pct { min-width:2.6em; text-align:right; }
-/* the two rows share a width, so the first row's right edge lands on the
-   second row's last column — statusline.sh pads with spaces to the same end */
-.slrows { display:flex; flex-direction:column; align-items:stretch; }
-.slrows .sl { width:100%; }
+/* The two rows share a width, so the first row's right edge lands on the second
+   row's last column — statusline.sh pads with spaces to the same end. The
+   column shrinks to its widest row rather than filling the page, so that column
+   is where the Fable bar ends and not where the viewport does. */
+.slrows { display:inline-flex; flex-direction:column; align-items:stretch; }
 .slgap { height:1.45em; }
 .sl.spread { justify-content:space-between; gap:1.2em; }
 .sl.spread .left, .sl.spread .right { display:inline-flex; align-items:center; }
@@ -572,12 +573,13 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="n">05</div>
           <h2>Repo and git state</h2>
           <p>The first row answers what you are working on and what you have done to it:
-            the folder, the branch, how many files changed by kind, and how many lines.
-            Long folder and branch names are cut to fit.</p>
+            the folder and the branch on the left, then how many files changed by kind
+            and how many lines, pushed right so its edge lands where the second row
+            ends. Long folder and branch names are cut to fit.</p>
           <div class="crop">
             <div class="slh" data-crop="4" aria-hidden="true"></div>
-            <noscript><img src="assets/loop-line-start.gif" width="1560" height="200"
-              alt="The first row of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too, while the file and line counts hold their place on the right."></noscript>
+            <noscript><img src="assets/loop-line-start.gif" width="1760" height="200"
+              alt="The first row of the statusline: the folder and the branch hold still on the left while the working-tree counts fill up on the right — files modified, added, deleted and untracked, then the lines — until a commit empties them and the count starts again. The gap between the two never closes."></noscript>
           </div>
         </section>
         <section class="step" id="s5" data-i="5" data-hue="#5891bd"
@@ -940,6 +942,15 @@ const U_END = 78;             // spend when the window turns over — 18 behind 
 /* the clock reading at the moment the effort dropped */
 const T_SWITCH = CLOCK_END * (EFFORT_SWITCH / RUN_END);
 
+/* 05's fixed location. 17 + ` ⎇ ` 3 + 14 is exactly the 34-cell budget, so
+   neither name is ever shortened — this section is about the row's shape, and
+   an eliding name would be a second thing to watch. */
+const REPO_DIR = 'claude-statusline', REPO_BRANCH = 'two-row-layout';
+/* Where the working tree is committed and the count starts again. */
+const COMMIT_AT = 0.9;
+/* What is left right after the commit — and where the loop starts. */
+const COMMITTED = {add: 0, mod: 1, del: 0, unt: 0, ins: 12, dels: 3};
+
 const STORIES = [
   /* 01 — high effort until the gap opens, then low, and the clock catches up */
   p => {
@@ -984,19 +995,27 @@ const STORIES = [
          fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
          week: 68 * (p / FABLE_RESET_AT),
          weekT: 100 * (p / FABLE_RESET_AT)},
-  /* 05 — the first row. A branch name types itself out until the pair
-     runs out of budget and the ladder starts eliding; then the project changes
-     too, and the model and effort change with it. Ported to stories.ts as
-     `lineStart` — the cue points are the same numbers. Change one, change the
+  /* 05 — repo and git state: the whole first row. The folder and the branch hold
+     still — they are the answer to "where am I", and that does not change while
+     you work — so the only thing moving is the tree. Files are touched, new ones
+     appear, lines pile up, and at COMMIT_AT it is all committed and the count
+     starts again, which is what makes the loop seamless.
+
+     The location is anchored left and the counts right, so the counts grow
+     leftward into the gap and their right edge never moves. Ported to stories.ts
+     as `lineStart` — the same names and the same ramp. Change one, change the
      other. */
   p => {
-    const BRANCH = 'feature/context-window-bar-redesign';
-    const typed = n => BRANCH.slice(0, Math.max(4, Math.round(n)));
-    if (p >= 0.94) return {dir: 'claude-statusline', branch: 'main'};   // the seam
-    if (p >= 0.76) return {dir: 'acme-platform-web-frontend', branch: BRANCH,
-                           model: 'Sonnet 5', effort: 'med'};
-    if (p >= 0.46) return {dir: 'claude-statusline', branch: BRANCH, effort: 'low'};
-    return {dir: 'claude-statusline', branch: typed(4 + (BRANCH.length - 4) * (p / 0.46))};
+    const q = Math.min(1, p / COMMIT_AT);
+    const tree = p >= COMMIT_AT ? COMMITTED : {
+      add: q >= 0.35 ? 1 : 0,
+      mod: 1 + Math.floor(5 * q),
+      del: q >= 0.62 ? 1 : 0,
+      unt: Math.min(2, Math.floor(3 * q)),
+      ins: Math.round(12 + 475 * q),
+      dels: Math.round(3 + 109 * q),
+    };
+    return {dir: REPO_DIR, branch: REPO_BRANCH, ...tree};
   },
   /* 06 — the whole line, every window alive at once. One wall clock drives every
      blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
