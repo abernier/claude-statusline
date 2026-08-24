@@ -230,14 +230,14 @@ const agents: Story = {
  * The cell count the row spreads over — the row's width on every frame, so the
  * folder never moves and neither does the counts' right edge. It has to clear
  * the widest frame or the row falls back to packing left and jumps: the
- * location is a fixed 34 cells and the fullest tree here is 36, so 34 + 36
+ * location is a fixed 17 cells and the fullest tree here is 36, so 17 + 36
  * leaves a gap that is 16 cells at its tightest and never closes.
  */
-const HEAD_CELLS = 34 + 36 + 16;
+const HEAD_CELLS = 17 + 36 + 16;
 
-/** 17 + ` ⎇ ` 3 + 14 is exactly the 34-cell budget, so neither name is cut. */
-const REPO_DIR = 'claude-statusline';
-const REPO_BRANCH = 'two-row-layout';
+/** 10 + ` ⎇ ` 3 + 4 is 17 cells, half the 34-cell budget, so neither name is cut. */
+const REPO_DIR = 'statusline';
+const REPO_BRANCH = 'main';
 /** Where the working tree is committed and the count starts again. */
 const COMMIT_AT = 0.9;
 /** What is left right after the commit — and where the loop starts. */

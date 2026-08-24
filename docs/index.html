@@ -576,7 +576,9 @@ noscript img { display:block; width:100%; height:auto; }
             the folder and the branch on the left, then how many files changed by kind
             and how many lines, pushed right so its edge lands where the second row
             ends. Long folder and branch names are cut to fit.</p>
-          <div class="crop">
+          <!-- wide like the whole-line crop: the location, the counts and the gap
+               the section is about are wider than the 860px measure -->
+          <div class="crop wide">
             <div class="slh" data-crop="4" aria-hidden="true"></div>
             <noscript><img src="assets/loop-line-start.gif" width="1760" height="200"
               alt="The first row of the statusline: the folder and the branch hold still on the left while the working-tree counts fill up on the right — files modified, added, deleted and untracked, then the lines — until a commit empties them and the count starts again. The gap between the two never closes."></noscript>
@@ -942,10 +944,12 @@ const U_END = 78;             // spend when the window turns over — 18 behind 
 /* the clock reading at the moment the effort dropped */
 const T_SWITCH = CLOCK_END * (EFFORT_SWITCH / RUN_END);
 
-/* 05's fixed location. 17 + ` ⎇ ` 3 + 14 is exactly the 34-cell budget, so
-   neither name is ever shortened — this section is about the row's shape, and
-   an eliding name would be a second thing to watch. */
-const REPO_DIR = 'claude-statusline', REPO_BRANCH = 'two-row-layout';
+/* 05's fixed location. 10 + ` ⎇ ` 3 + 4 is 17 cells, half the 34-cell budget,
+   so neither name is ever shortened — this section is about the row's shape,
+   and an eliding name would be a second thing to watch. Short names also keep
+   the row itself short: the crop draws it at the same 30px cap the other crops
+   use, and a longer location pushed the row past the crop's width. */
+const REPO_DIR = 'statusline', REPO_BRANCH = 'main';
 /* Where the working tree is committed and the count starts again. */
 const COMMIT_AT = 0.9;
 /* What is left right after the commit — and where the loop starts. */

@@ -65,6 +65,12 @@ number would.
   once, never for one row alone. Both mockups measure the same widths.
 - The agent-panel loop is rendered wider (1680px) to hold the two new fields,
   and its crop on the landing page is wide for the same reason.
+- **Story 05 has room for the whole first row.** The loop's checkout is now
+  `statusline ⎇ main` rather than `claude-statusline ⎇ two-row-layout`, which
+  halves the location to 17 cells, and the crop on the landing page is wide
+  like the whole-line and agent-panel crops. The row no longer runs off the
+  edge of its box. The rendered loop keeps its 1760px canvas and spends the
+  cells the shorter names free on type size instead: 30px to 38px.
 - **The walkthrough is re-cut.** The agent panel moves up to 03. A new 04,
   "The start of the line", shows the folder, branch, model, and effort as a
   loop: a branch name grows until it no longer fits, is cut, and then the
