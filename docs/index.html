@@ -113,6 +113,19 @@ a { color:inherit; }
 .sl .dot { color:var(--sep); }
 .sl .eff { color:var(--dim); }
 .sl .pct { min-width:2.6em; text-align:right; }
+/* the two rows share a width, so the first row's right edge lands on the
+   second row's last column — statusline.sh pads with spaces to the same end */
+.slrows { display:flex; flex-direction:column; align-items:stretch; }
+.slrows .sl { width:100%; }
+.slgap { height:1.45em; }
+.sl.spread { justify-content:space-between; gap:1.2em; }
+.sl.spread .left, .sl.spread .right { display:inline-flex; align-items:center; }
+/* one space inside a count, two between counts, so a count and its label bind */
+.sl .kind { display:inline-flex; align-items:center; gap:.55em; margin-right:1.1em; }
+.sl .kind:last-of-type { margin-right:0; }
+.sl .kind b, .sl .lines b { font-weight:700; }
+.sl .kind .lbl { color:var(--dim); }
+.sl .lines { display:inline-flex; align-items:center; gap:.55em; }
 .sl .reset { min-width:3.9em; }
 /* right-aligned like .pct, so the `k` holds one column as the count grows */
 .sl .tok { min-width:2.6em; text-align:right; }
@@ -145,17 +158,18 @@ a { color:inherit; }
 .tui-head .who .meta, .tui-head .who .cwd { color:#a9a9a9; line-height:1.7; }
 .tui-hint { display:flex; gap:13px; color:#8a8a8a; padding:0 var(--pad); line-height:1.6; }
 .tui-hint .rule { width:2px; background:#3a3a3a; flex:0 0 2px; border-radius:2px; }
-.tui-prompt { border-top:1px solid #2b2b2b; padding:18px var(--pad); display:flex; gap:13px;
-  color:#6a6a6a; }
-.tui-prompt .chev { color:#8a8a8a; }
-.tui-prompt .cur::after { content:'▊'; color:#8a8a8a; animation:blink 1.05s steps(1) infinite; }
+/* the input box, drawn as Claude Code draws it: a rule above and below the
+   caret rather than a single edge, so the prompt reads as a field */
+.tui-box { border:1px solid #2b2b2b; border-radius:8px; margin:20px var(--pad) 0;
+  padding:12px 15px; display:flex; gap:13px; color:#6a6a6a; }
+.tui-box .chev { color:#8a8a8a; }
+.tui-box .cur::after { content:'▊'; color:#8a8a8a; animation:blink 1.05s steps(1) infinite; }
 @keyframes blink { 50% { opacity:0 } }
-.tui-sl { padding:52px var(--pad) 48px; }
-.tui-mode { color:var(--brand); padding:0 var(--pad) 28px; font-size:12.5px; }
+/* the two rows carry their own blank row, so the block needs less air than the
+   single line did */
+.tui-sl { padding:26px var(--pad) 12px; }
+.tui-mode { color:var(--brand); padding:0 var(--pad) 22px; font-size:12.5px; }
 .tui-mode span { color:var(--faint); }
-/* the caption is a typed comment — it needs air above it, not just below */
-.tui-cap { color:var(--faint); font-size:.86em; padding:20px var(--pad) 0; min-height:1.5em; }
-.tui-cap::after { content:'▊'; color:#454545; animation:blink 1.05s steps(1) infinite; }
 
 /* the zoomed loop under each section. It scrolls inside its own box rather than
    bursting the layout: below ~640px the line is wider than any phone, and the
@@ -432,9 +446,9 @@ noscript img { display:block; width:100%; height:auto; }
       <a href="#s0" data-step="0"><i>01</i>Usage against time</a>
       <a href="#s1" data-step="1"><i>02</i>Context window</a>
       <a href="#s2" data-step="2"><i>03</i>The agent panel</a>
-      <a href="#s3" data-step="3"><i>04</i>The start of the line</a>
-      <a href="#s4" data-step="4"><i>05</i>The Fable window</a>
-      <a href="#s5" data-step="5"><i>06</i>What is on the line</a>
+      <a href="#s3" data-step="3"><i>04</i>The Fable window</a>
+      <a href="#s4" data-step="4"><i>05</i>Repo and git state</a>
+      <a href="#s5" data-step="5"><i>06</i>Context and limits</a>
     </nav>
     <div class="grp">Reference</div>
     <nav>
@@ -487,9 +501,7 @@ noscript img { display:block; width:100%; height:auto; }
         </header>
 
         <section class="step" id="s0" data-i="0" data-hue="#cf8a4e"
-                 data-cap="# high effort — spending faster than the clock"
-                 data-cap-low="# low effort — the clock is catching up"
-                 data-cap-reset="# the window resets" style="--stepc:#cf8a4e">
+                 style="--stepc:#cf8a4e">
           <div class="n">01</div>
           <h2>Usage against time</h2>
           <div class="cols">
@@ -518,7 +530,7 @@ noscript img { display:block; width:100%; height:auto; }
           </div>
         </section>
         <section class="step" id="s1" data-i="1" data-hue="#c0564e"
-                 data-cap="# context filling up" style="--stepc:#c0564e">
+                 style="--stepc:#c0564e">
           <div class="n">02</div>
           <h2>Context window</h2>
           <p>The bar turns yellow at 25% and red at 50%. Start a new session at yellow.
@@ -530,7 +542,7 @@ noscript img { display:block; width:100%; height:auto; }
           </div>
         </section>
         <section class="step" id="s2" data-i="2" data-hue="#4ea895"
-                 data-cap="# each agent burns its own window" style="--stepc:#4ea895">
+                 style="--stepc:#4ea895">
           <div class="n">03</div>
           <h2>The agent panel</h2>
           <p>Each subagent shows its own context bar, model, and effort.</p>
@@ -542,36 +554,38 @@ noscript img { display:block; width:100%; height:auto; }
               alt="Three agent rows, each with its own context bar, model and effort: one holds at 34%, one climbs into red, one starts late and stays green."></noscript>
           </div>
         </section>
-        <section class="step" id="s3" data-i="3" data-hue="#6ea85c"
-                 data-cap="# folder, branch, model, effort" style="--stepc:#6ea85c">
+        <section class="step" id="s3" data-i="3" data-hue="#8f79c0"
+                 style="--stepc:#8f79c0">
           <div class="n">04</div>
-          <h2>The start of the line</h2>
-          <p>Long folder and branch names are cut to fit.</p>
-          <div class="crop">
-            <div class="slh" data-crop="3" aria-hidden="true"></div>
-            <noscript><img src="assets/loop-line-start.gif" width="1500" height="200"
-              alt="The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and the model and effort change."></noscript>
-          </div>
-        </section>
-
-        <section class="step" id="s4" data-i="4" data-hue="#8f79c0"
-                 data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
-          <div class="n">05</div>
           <h2>The Fable window</h2>
           <p>Fable has its own weekly quota. The limit is usually lower than for other
             models.</p>
           <div class="crop annotated">
-            <div class="slh" data-crop="4" aria-hidden="true"></div>
+            <div class="slh" data-crop="3" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="306"
               alt="The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset."></noscript>
           </div>
         </section>
+
+        <section class="step" id="s4" data-i="4" data-hue="#6ea85c"
+                 style="--stepc:#6ea85c">
+          <div class="n">05</div>
+          <h2>Repo and git state</h2>
+          <p>The first row answers what you are working on and what you have done to it:
+            the folder, the branch, how many files changed by kind, and how many lines.
+            Long folder and branch names are cut to fit.</p>
+          <div class="crop">
+            <div class="slh" data-crop="4" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-line-start.gif" width="1560" height="200"
+              alt="The first row of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too, while the file and line counts hold their place on the right."></noscript>
+          </div>
+        </section>
         <section class="step" id="s5" data-i="5" data-hue="#5891bd"
-                 data-cap="# context, 5h, 7d, Fable" style="--stepc:#5891bd">
+                 style="--stepc:#5891bd">
           <div class="n">06</div>
-          <h2>What is on the line</h2>
-          <p>The statusline shows the context window, the 5-hour limit, and the 7-day and
-            Fable windows.</p>
+          <h2>Context and limits</h2>
+          <p>The second row is the instrument panel: how full the context window is, then
+            the 5-hour limit and the 7-day and Fable windows.</p>
           <div class="crop wide">
             <div class="slh" data-crop="5" aria-hidden="true"></div>
             <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
@@ -706,8 +720,7 @@ $ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
     <!-- the docked statusline: exactly where Claude Code renders the real one -->
     <div class="appfoot" id="pin">
       <div class="tui">
-        <div class="tui-cap" id="cap"></div>
-        <div class="tui-prompt"><span class="chev">⟩</span><span class="cur"></span></div>
+        <div class="tui-box"><span class="chev">⟩</span><span class="cur"></span></div>
         <div class="tui-sl">
           <div class="slh" id="dock" aria-hidden="true"></div>
           <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
@@ -787,7 +800,10 @@ function stackedBar(usage, elapsed, color, glow) {
    bars and the two can never drift apart. */
 const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7,
                   dir:'claude-statusline', branch:'main', model:'Opus 5 1M', effort:'high',
-                  glow:false, only:null, focus:null, compact:false, head:false};
+                  /* the working tree, as statusline.sh counts it: files by kind,
+                     then lines against the last commit */
+                  add:1, mod:4, del:1, unt:1, ins:232, dels:54,
+                  glow:false, only:null, focus:null, compact:false, head:false, rows:false};
 
 /* ================= the location ladder =================
    statusline.sh's own steps, in the same order. While both fit, neither is
@@ -814,26 +830,37 @@ function fitLocation(project, branch) {
   return [wordTrim(project, Math.max(LOC_MAX - glue - bw, PROJECT_FLOOR)), wordTrim(branch, bw)];
 }
 
-/* `compact` drops dir/branch/model — the line from Ctx rightward;
-   `head` keeps only those two, the start of the line; `only` crops to a
-   single segment. */
+/* `rows` draws both rows, as Claude Code shows them; `compact` drops the first
+   row and the model — the line from Ctx rightward; `head` keeps the first row
+   alone; `only` crops to a single segment. */
 function statusline(o = {}) {
   const s = {...DEFAULTS, ...o};
   /* the script is handed percentages already rounded (jq `| round`), and uses
      the same integer for the bar and the number — so they can never disagree */
   const R = Math.round;
   const ctx = R(s.ctx), five = R(s.five), week = R(s.week), fable = R(s.fable);
-  const isHead = id => id === 'dir' || id === 'model';
+  const isHead = id => id === 'dir' || id === 'git';
   const skip = id => (s.only && s.only !== id)
-    || (s.compact && isHead(id)) || (s.head && !isHead(id));
+    || (s.compact && (isHead(id) || id === 'model')) || (s.head && !isHead(id));
   const seg = (id, inner) => skip(id) ? null
     : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
   const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
   const reset = t => `<span class="reset">${t}</span>`;
   const tok = v => `<span class="tok">${fmtTokens(v)}</span>`;
+  /* the count carries the weight and the colour, the label stays grey, and a
+     kind with no files is left out — statusline.sh's own rule */
+  const kind = (n, c, label) => n > 0
+    ? `<span class="kind"><b style="color:${c}">${n}</b><span class="lbl">${label}</span></span>` : '';
+  const gitFiles = [kind(s.add, 'var(--green)', 'add'), kind(s.mod, 'var(--yellow)', 'mod'),
+                    kind(s.del, 'var(--red)', 'del'), kind(s.unt, 'var(--dim)', '?')].join('');
+  const gitLines = `<span class="lines">${s.ins > 0 ? `<b style="color:var(--green)">+${s.ins}</b>` : ''}${
+    s.dels > 0 ? `<b style="color:var(--red)">-${s.dels}</b>` : ''}</span>`;
+  /* story 01's turnover frame reports `reset`, which is a cue and not a level */
+  const eff = s.effort === 'reset' ? 'low' : (s.effort ?? 'high');
   const parts = [
     seg('dir',   (([d, b]) => `<span class="dir">${d}</span><span class="br">⎇ ${b}</span>`)(fitLocation(s.dir, s.branch))),
-    seg('model', `<span class="star">★</span><span>${s.model}</span><span class="dot">·</span><span class="eff">${s.effort === 'low' ? 'low' : s.effort ?? 'high'}</span>`),
+    seg('git',   `${gitFiles}<span class="pipe">│</span>${gitLines}`),
+    seg('model', `<span class="star">★</span><span>${s.model}</span><span class="dot">·</span><span class="eff">${eff}</span>`),
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, paceColor(five, s.fiveT), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
     seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, paceColor(week, s.weekT))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
@@ -842,9 +869,24 @@ function statusline(o = {}) {
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to
      stay a zoom of the docked line rather than a shrunk copy of it. */
-  const k = s.k ?? (s.only ? 5.4 : s.head ? 2.5 : s.compact ? 1.0 : 1.15);
-  const cap = s.cap ?? (s.only ? 44 : s.head ? 30 : s.compact ? 15 : 21);
-  return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
+  const k = s.k ?? (s.only ? 5.4 : s.head ? 2.5 : s.rows ? 1.0 : s.compact ? 1.0 : 1.15);
+  const cap = s.cap ?? (s.only ? 44 : s.head ? 30 : s.rows ? 15 : s.compact ? 15 : 21);
+  const size = `font-size:clamp(9px,${k}cqi,${cap}px)`;
+  const join = a => a.join('<span class="pipe">│</span>');
+  /* The first row is space-between: the checkout on the left, what changed in
+     it pushed right. The script pads with spaces to land on row 2's last
+     column; here the two rows share a width and flex does the same job. */
+  const spread = a => a.length > 1
+    ? `<span class="left">${a[0]}</span><span class="right">${join(a.slice(1))}</span>`
+    : join(a);
+  if (s.head) return `<div class="sl spread" style="${size}">${spread(parts)}</div>`;
+  if (!s.rows) return `<div class="sl" style="${size}">${join(parts)}</div>`;
+  /* both rows, with the blank row between them that the script prints */
+  const head = parts.filter((_, i) => i < 2), rest = parts.slice(2);
+  return `<div class="slrows" style="${size}">`
+    + `<div class="sl spread">${spread(head)}</div>`
+    + `<div class="slgap" aria-hidden="true"></div>`
+    + `<div class="sl">${join(rest)}</div></div>`;
 }
 
 /* the agent panel, as subagent-statusline.sh draws it: one row per agent,
@@ -934,7 +976,15 @@ const STORIES = [
       ],
     };
   },
-  /* 04 — the start of the line. A branch name types itself out until the pair
+  /* 04 — the Fable quota is spent long before the week is over, and only the
+     weekly reset gives it back. The blue clock runs the whole way to the end of
+     the window, then everything on that clock — Fable and 7d alike — drops to
+     zero, which is where the loop starts. */
+  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
+         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
+         week: 68 * (p / FABLE_RESET_AT),
+         weekT: 100 * (p / FABLE_RESET_AT)},
+  /* 05 — the first row. A branch name types itself out until the pair
      runs out of budget and the ladder starts eliding; then the project changes
      too, and the model and effort change with it. Ported to stories.ts as
      `lineStart` — the cue points are the same numbers. Change one, change the
@@ -948,14 +998,6 @@ const STORIES = [
     if (p >= 0.46) return {dir: 'claude-statusline', branch: BRANCH, effort: 'low'};
     return {dir: 'claude-statusline', branch: typed(4 + (BRANCH.length - 4) * (p / 0.46))};
   },
-  /* 05 — the Fable quota is spent long before the week is over, and only the
-     weekly reset gives it back. The blue clock runs the whole way to the end of
-     the window, then everything on that clock — Fable and 7d alike — drops to
-     zero, which is where the loop starts. */
-  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
-         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
-         week: 68 * (p / FABLE_RESET_AT),
-         weekT: 100 * (p / FABLE_RESET_AT)},
   /* 06 — the whole line, every window alive at once. One wall clock drives every
      blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
      window and 2.1 points of a 7-day one. */
@@ -969,9 +1011,9 @@ const STORIES = [
 ];
 
 /* what each crop frames, and which segment the docked line keeps lit */
-const CROPS = [{only:'five'}, {only:'ctx'}, {panel:true}, {head:true}, {only:'fable'},
+const CROPS = [{only:'five'}, {only:'ctx'}, {panel:true}, {only:'fable'}, {head:true},
                {compact:true, k:1.35, cap:18}];
-const FOCUS = ['five', 'ctx', 'ctx', null, 'fable', null];
+const FOCUS = ['five', 'ctx', 'ctx', 'fable', null, null];
 
 /* ================= behaviour ================= */
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -983,7 +1025,6 @@ const PERIOD = 8000;   // 8s a loop, as the renders are cut (compositions.ts)
 const scroller = document.getElementById('scrollarea');
 const pin = document.getElementById('pin');
 const dock = document.getElementById('dock');
-const cap = document.getElementById('cap');
 const steps = [...document.querySelectorAll('.step')];
 const navLinks = [...document.querySelectorAll('[data-step]')];
 const crops = [...document.querySelectorAll('[data-crop]')];
@@ -1137,12 +1178,7 @@ const paint = p => {
     annotate(i, {...DEFAULTS, ...s});
   });
   const s = STORIES[active](p);
-  dock.innerHTML = statusline({compact: true, focus: FOCUS[active], ...s});
-  /* 01's typed comment follows its two phases. Every other section has one
-     line, and falls through to it. */
-  const d = steps[active].dataset;
-  cap.textContent = s.effort === 'low' ? d.capLow
-    : s.effort === 'reset' ? d.capReset : d.cap;
+  dock.innerHTML = statusline({rows: true, focus: FOCUS[active], ...s});
   pin.style.setProperty('--tint', steps[active].dataset.hue);
   pin.classList.add('tinted');
 };

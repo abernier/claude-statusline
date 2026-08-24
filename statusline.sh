@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Claude Code statusline: dir ⎇branch │ ★ Model · effort │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
+# Claude Code statusline, two rows:
+#   dir ⎇ branch                         3 mod │ +182 -47
+#
+#   ★ Model · effort │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
 # Reads the statusline JSON from stdin (see https://code.claude.com/docs/en/statusline.md)
 
 input=$(cat)
@@ -102,7 +105,10 @@ fi
 RESET='\033[0m'
 DIM='\033[38;2;138;138;138m'
 SEP='\033[38;2;55;55;55m'
+BOLD='\033[1m'
 AMBER='\033[38;2;255;175;60m'
+GREEN='\033[38;2;140;194;74m'
+RED='\033[38;2;220;60;60m'
 TRACK='48;2;55;55;55'
 
 # limit color (5h/7d/Fable): green < 50, yellow 50-80, red > 80 (truecolor RGB)
@@ -275,18 +281,54 @@ word_trim() {
   printf '%s' "${best}…"
 }
 
+# plain <string> — the string without its color escapes, for measuring. Two
+# kinds appear: the palette variables hold the literal text \033[..m, which
+# printf %b turns into escapes only at output, while bar() and stacked_bar()
+# run their own output through printf %b and so return real escape bytes.
+plain() {
+  local s=$1 out=""
+  while [[ $s == *'\033['* ]]; do
+    out+=${s%%'\033['*}; s=${s#*'\033['}; s=${s#*m}
+  done
+  s="$out$s"; out=""
+  while [[ $s == *$'\033['* ]]; do
+    out+=${s%%$'\033['*}; s=${s#*$'\033['}; s=${s#*m}
+  done
+  printf '%s' "$out$s"
+}
+
+# join_row <segments...> — the segments with " │ " between them
+join_row() {
+  local out="" s
+  for s in "$@"; do
+    [[ -n "$out" ]] && out+=" ${SEP}│${RESET} "
+    out+="$s"
+  done
+  printf '%s' "$out"
+}
+
+row_width() { vis_len "$(plain "$1")"; }
+
 # The project and the branch share one column budget. Nothing is shortened
 # while both fit; past that the branch gives up its namespace, then its tail,
 # and only then does the project give up anything.
-# Anything but digits here would be evaluated as an arithmetic expression, so
-# it is checked before it ever reaches (( )).
-LOC_MAX=${STATUSLINE_LOC_MAX:-34}
-[[ $LOC_MAX =~ ^[0-9]+$ ]] || LOC_MAX=34
+#
+# The budget is whatever row 1 has left after the file and line groups, which
+# is most of the terminal. Claude Code captures the script's output rather than
+# giving it a terminal, so `tput cols` reads nothing; it passes the width in
+# COLUMNS instead (v2.1.153 or later). Older versions send no width, and then
+# the budget is a fixed LOC_FALLBACK that suits an 80-column terminal.
 LOC_GLUE=3          # the " ⎇ " between the two
+LOC_MARGIN=1        # a column kept free at the end of the row
+LOC_FLOOR=24        # never squeeze the pair below this, however narrow the term
+LOC_FALLBACK=64     # the budget when the terminal width is unknown
 BRANCH_FLOOR=12     # the shortest branch worth printing
 PROJECT_FLOOR=10    # the shortest project worth printing
 
-segs=()
+# Row 1 is the checkout and what has changed in it. Row 2 is the instrument
+# panel: the model and the bars.
+row1=()
+row2=()
 
 # directory + git branch. A linked worktree's private git dir holds a
 # `commondir` file and the main .git never does — a path-string comparison of
@@ -309,6 +351,67 @@ if [[ -n "$dir" ]]; then
     glue=$LOC_GLUE
     [[ -n "$worktree" ]] && glue=$(( LOC_GLUE + 1 ))
   fi
+
+  # Working-tree state, in two groups: how many files changed, by kind, and
+  # how many lines. Two git calls per render. `status` is the only one that
+  # sees untracked files, and `diff --numstat` is the only machine-readable
+  # line count — `--shortstat` is translated into the reader's locale.
+  #
+  # A file gets one kind, most significant first: untracked, added, deleted,
+  # then modified. Staged and unstaged both count, so `AM` (added, then edited
+  # again) is one added file, not two.
+  IFS=$'\t' read -r n_add n_mod n_del n_unt <<<"$(
+    git -C "$dir" status --porcelain 2>/dev/null | awk '
+      { s = substr($0, 1, 2)
+        if      (s == "??") u++
+        else if (s ~ /A/)   a++
+        else if (s ~ /D/)   d++
+        else                m++ }
+      END { printf "%d\t%d\t%d\t%d", a+0, m+0, d+0, u+0 }')"
+
+  # A binary file has "-" for both counts instead of a number.
+  IFS=$'\t' read -r ins dels <<<"$(
+    git -C "$dir" diff HEAD --numstat 2>/dev/null | awk -F'\t' '
+      { if ($1 != "-") a += $1; if ($2 != "-") d += $2 }
+      END { printf "%d\t%d", a+0, d+0 }')"
+
+  # The count carries the weight and the color; the label stays gray, so a row
+  # of counts reads as numbers first. The labels are abbreviations, so none of
+  # them needs a plural: `1 mod` and `4 mod` both read. Untracked has no verb
+  # worth shortening and keeps git's own `?`.
+  #
+  # A kind with no files is left out, so the common case — a few edits and
+  # nothing else — reads `3 mod` rather than a row of zeroes.
+  # Two spaces between kinds against one inside each, so a count and its label
+  # read as one unit and the kinds read as a row of them.
+  kind() { printf '  %s%s%s%s %s%s%s' "$BOLD" "$2" "$1" "$RESET" "$DIM" "$3" "$RESET"; }
+  files=""
+  (( n_add > 0 )) && files+=$(kind "$n_add" "$GREEN" add)
+  (( n_mod > 0 )) && files+=$(kind "$n_mod" "$AMBER" mod)
+  (( n_del > 0 )) && files+=$(kind "$n_del" "$RED"   del)
+  (( n_unt > 0 )) && files+=$(kind "$n_unt" "$DIM"   '?')
+
+  # Untracked files carry no line counts, so a tree holding nothing but new
+  # files shows the file group and no line group.
+  lines=""
+  (( ins > 0 ))  && lines+=" ${BOLD}${GREEN}+${ins}${RESET}"
+  (( dels > 0 )) && lines+=" ${BOLD}${RED}-${dels}${RESET}"
+
+  # What the rest of row 1 costs: each group plus the " │ " that introduces it.
+  rest=0
+  [[ -n "$files" ]] && rest=$(( rest + $(row_width "${files##  }") + LOC_GLUE ))
+  [[ -n "$lines" ]] && rest=$(( rest + $(row_width "${lines# }") + LOC_GLUE ))
+
+  # An override wins outright. Anything but digits would be evaluated as an
+  # arithmetic expression, so it is checked before it ever reaches (( )).
+  if [[ $STATUSLINE_LOC_MAX =~ ^[0-9]+$ ]]; then
+    LOC_MAX=$STATUSLINE_LOC_MAX
+  elif [[ $COLUMNS =~ ^[0-9]+$ ]] && (( COLUMNS > 0 )); then
+    LOC_MAX=$(( COLUMNS - rest - LOC_MARGIN ))
+  else
+    LOC_MAX=$(( LOC_FALLBACK - rest ))
+  fi
+  (( LOC_MAX < LOC_FLOOR )) && LOC_MAX=$LOC_FLOOR
 
   # spend the budget one step at a time, stopping as soon as the pair fits
   pw=$(vis_len "$project") bw=$(vis_len "$branch")
@@ -339,19 +442,21 @@ if [[ -n "$dir" ]]; then
       loc+=" ${DIM}⎇ ${branch}"
     fi
   fi
-  segs+=("${loc}${RESET}")
+  row1+=("${loc}${RESET}")
+  [[ -n "$files" ]] && row1+=("${files##  }")
+  [[ -n "$lines" ]] && row1+=("${lines# }")
 fi
 
-seg="\033[38;2;140;194;74m★ $(short_model "$model")${RESET}"
+seg="${GREEN}★ $(short_model "$model")${RESET}"
 eff=$(effort_label "$effort")
 [[ -n "$eff" ]] && seg+=" ${SEP}·${RESET} ${DIM}${eff}${RESET}"
-segs+=("$seg")
+row2+=("$seg")
 
 if (( ctx_pct >= 0 )); then
   seg="${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color)"
   seg+=" \033[$(ctx_color "$ctx_pct")m${ctx_pct}%${RESET}"
   (( ctx_tokens > 0 )) && seg+=" ${DIM}$(fmt_tokens "$ctx_tokens")${RESET}"
-  segs+=("$seg")
+  row2+=("$seg")
 fi
 
 # elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
@@ -369,7 +474,7 @@ if (( five_pct >= 0 )); then
   fi
   seg+=" \033[$(pct_color "$five_pct")m${five_pct}%${RESET}"
   (( five_reset > 0 )) && seg+=" ${DIM}↻$(fmt_reset "$five_reset")${RESET}"
-  segs+=("$seg")
+  row2+=("$seg")
 fi
 
 if (( week_pct >= 0 )); then
@@ -381,7 +486,7 @@ if (( week_pct >= 0 )); then
   fi
   seg+=" \033[$(pct_color "$week_pct")m${week_pct}%${RESET}"
   (( week_reset > 0 )) && seg+=" ${DIM}↻$(fmt_reset "$week_reset")${RESET}"
-  segs+=("$seg")
+  row2+=("$seg")
 fi
 
 if (( fable_pct >= 0 )); then
@@ -394,12 +499,42 @@ if (( fable_pct >= 0 )); then
   # No ↻ countdown here: the Fable window resets with the 7-day one, so the
   # segment before it already shows this exact time.
   seg+=" \033[$(pct_color "$fable_pct")m${fable_pct}%${RESET}"
-  segs+=("$seg")
+  row2+=("$seg")
 fi
 
-out=""
-for s in "${segs[@]}"; do
-  [[ -n "$out" ]] && out+=" ${SEP}│${RESET} "
-  out+="$s"
-done
-printf '%b\n' "$out"
+# Each line printed is one row of the statusline. A row with nothing in it —
+# row 1 outside a workspace — is skipped rather than printed blank.
+print_row() { printf '%b\n' "$1"; }
+
+r2=$(join_row "${row2[@]}")
+w2=$(row_width "$r2")
+
+# Row 1 ends where row 2 ends. Row 2 is a fixed set of bars and so has a width
+# of its own; on a terminal narrower than that it already overruns, and row 1
+# stops at the terminal edge rather than following it out of view.
+target=$w2
+[[ $COLUMNS =~ ^[0-9]+$ ]] && (( COLUMNS > 0 && COLUMNS - 1 < target )) && target=$(( COLUMNS - 1 ))
+
+# Row 1 is space-between: the checkout on the left, what changed in it pushed
+# right so its edge lines up with row 2's. The gap does the separating, so the
+# group takes no leading │. When there is no room for a gap, one space keeps
+# them apart and the row simply runs long.
+if (( ${#row1[@]} > 1 )); then
+  loc=$(join_row "${row1[0]}")
+  stats=$(join_row "${row1[@]:1}")
+  pad=$(( target - $(row_width "$loc") - $(row_width "$stats") ))
+  (( pad < 1 )) && pad=1
+  print_row "$(printf '%s%*s%s' "$loc" "$pad" "" "$stats")"
+elif (( ${#row1[@]} > 0 )); then
+  print_row "$(join_row "${row1[@]}")"
+fi
+
+# A blank row between the two, so the pair does not read as one block. One
+# terminal row is the smallest unit of vertical space there is. The character
+# is U+2800 BRAILLE PATTERN BLANK: it draws as nothing, but it is not
+# whitespace, so the row survives the trim that eats a plain space. Delete
+# this line for a tighter pair.
+(( ${#row1[@]} > 0 && ${#row2[@]} > 0 )) && printf '⠀\n'
+
+(( ${#row2[@]} > 0 )) && print_row "$r2"
+exit 0

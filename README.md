@@ -84,7 +84,8 @@ Then add this to `~/.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh"
+    "command": "~/.claude/statusline.sh",
+    "refreshInterval": 5
   },
   "subagentStatusLine": {
     "type": "command",
@@ -92,6 +93,12 @@ Then add this to `~/.claude/settings.json`:
   }
 }
 ```
+
+`refreshInterval` re-runs the line every five seconds on top of the usual
+event-driven updates. Without it the file and line counts go stale whenever a
+subagent writes to the tree while the session is idle, and the `↻` countdowns
+only move when something else happens. Raise it on a large repository, where
+`git status` is the slowest part of a render.
 
 </details>
 
@@ -126,7 +133,19 @@ another statusline. `--no-settings` removes the scripts only.
 
 ## What it shows
 
-Left to right:
+Two rows, with a blank row between them. The first is the checkout and what
+has changed in it. The second is the model and the bars.
+
+The first row is laid out space-between: the checkout on the left, what changed
+pushed right so that its edge lines up with the end of the second row.
+
+```text
+claude-statusline ⎇ main                             3 mod │ +182 -47
+
+★ Opus 5 1M · max │ Ctx ███░░░░░░░ 28% 90k │ 5h … │ 7d … │ Fable ▀▀░░░░░░░░ 8%
+```
+
+### The first row
 
 - **dir ⎇ branch** — the directory name and the git branch. In a linked
   [git worktree](https://git-scm.com/docs/git-worktree) the glyph is an amber
@@ -137,17 +156,33 @@ Left to right:
   claude-statusline-fix ⎇+ fix/bar  ← a linked worktree
   ```
 
-  The two share a 34-column budget. While both fit, neither is shortened. When
-  they do not fit, the branch loses its namespace first, then its tail, then
-  the directory is cut:
+  The two share whatever the first row has left after the file and line
+  groups, which on a normal terminal is most of the width. While both fit,
+  neither is shortened. When they do not fit, the branch loses its namespace
+  first, then its tail, then the directory is cut:
 
   ```text
   claude-statusline ⎇ f/context-win…   ← feature/context-window-bar-redesign
   acme-platform-web… ⎇ a/issue-214…    ← alp82/issue-214-truncate-long-names
   ```
 
-  To change the budget, set `STATUSLINE_LOC_MAX`. Widths are measured in
-  terminal columns: a CJK or emoji glyph counts as two.
+  Claude Code passes the terminal width in `COLUMNS`, which requires v2.1.153
+  or later. Without it the budget is a fixed 64 columns minus the groups. It
+  never falls below 24 columns, however narrow the terminal. To pin it to a
+  fixed number, set `STATUSLINE_LOC_MAX`, which overrides both. Widths are
+  measured in terminal columns: a CJK or emoji glyph counts as two.
+- **3 mod** — how many files changed, by kind: `add`, `mod`, `del`, and `?`
+  for untracked. The count carries the weight and the color; the label stays
+  gray, so a row of counts reads as numbers first. Staged and unstaged both
+  count. A kind with no files is left out, so a few ordinary edits read
+  `3 mod`, and a clean tree shows the directory alone. A new directory counts
+  as one untracked entry, the way `git status` reports it.
+- **+182 -47** — lines added and lines removed against the last commit.
+  Untracked files have no line counts, so a tree holding nothing but new
+  files shows the file kinds and no line counts.
+
+### The second row
+
 - **★ Model · effort** — the active model, shortened (`Opus 5 (1M context)`
   becomes `Opus 5 1M`), and the reasoning effort: `low`, `med`, `high`, `xhi`,
   or `max`. A model without an effort setting shows the name alone.
@@ -196,12 +231,6 @@ own context bar, model, and effort.
 On a narrow panel, the effort column drops first and the model column second.
 Requires Claude Code v2.1.205 or later.
 
-### The start of the line
-
-![The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and the model and effort change.](docs/assets/loop-line-start.gif)
-
-Long folder and branch names are cut to fit. The model and the effort follow.
-
 ### The Fable window
 
 ![The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
@@ -217,6 +246,14 @@ Code stores it there instead of in `~/.claude/.credentials.json`. The first
 read can open a Keychain dialog. Click **Always Allow** once and it stops
 asking. To skip the Keychain, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1`. The Fable
 bar then uses only the CLI's own cache.
+
+### Repo and git state
+
+![The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and what changed in the tree follows it.](docs/assets/loop-line-start.gif)
+
+The first row answers what you are working on and what you have done to it: the
+folder, the branch, how many files changed by kind, and how many lines. Long
+folder and branch names are cut to fit; the counts keep their room.
 
 ## Requirements
 

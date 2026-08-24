@@ -33,11 +33,12 @@ const WHOLE = {width: 2240, height: 180, fontSize: 32};
 const AGENTS = {width: 1680, height: 330, fontSize: 34};
 
 /**
- * The start of the line. Its widest frame is 55 cells — folder 17 + ` ⎇ ` 3 +
- * branch 14, then ` │ ` 3 and `★ Opus 5 1M · high` 18 — so 55 × 0.6 × 40 =
- * 1320px, and 1500 leaves the breathing room the other loops get.
+ * The first row: the folder and the branch on the left, what changed in the
+ * tree on the right. The row spreads over 73 cells (`HEAD_CELLS` in stories.ts)
+ * on every frame, so its width is fixed — 73 × 0.6 × 32 = 1402px, and 1560
+ * leaves the breathing room the other loops get.
  */
-const HEAD = {width: 1500, height: 200, fontSize: 40};
+const HEAD = {width: 1560, height: 200, fontSize: 32};
 
 /** The frame `Loop` draws around the panel, on both edges of both axes. */
 const FRAME = 2 * LOOP_PADDING;

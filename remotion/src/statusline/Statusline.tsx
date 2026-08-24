@@ -10,7 +10,8 @@ export const TextRun: React.FC<{
   color: string;
   cellWidth: number;
   cellHeight: number;
-}> = ({text, color, cellWidth, cellHeight}) => (
+  bold?: boolean;
+}> = ({text, color, cellWidth, cellHeight, bold}) => (
   <>
     {[...text].map((ch, i) => (
       <div
@@ -22,6 +23,7 @@ export const TextRun: React.FC<{
           width: cellWidth,
           height: cellHeight,
           color,
+          fontWeight: bold ? 700 : undefined,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -46,6 +48,7 @@ const PartView: React.FC<{
         color={part.color}
         cellWidth={cellWidth}
         cellHeight={cellHeight}
+        bold={part.bold}
       />
     );
   }
@@ -89,6 +92,11 @@ export type StatuslineProps = {
   segmentStyle?: (id: SegmentId, index: number) => React.CSSProperties;
   /** Stacked bars that should glow where usage overshoots elapsed time. */
   glow?: SegmentId[];
+  /**
+   * Lay the row out space-between over this many cells, as the script lays out
+   * its first row. Omit to pack left.
+   */
+  spreadTo?: number;
 };
 
 /**
@@ -104,11 +112,12 @@ export const Statusline: React.FC<StatuslineProps> = ({
   dimLevel = 0.25,
   segmentStyle,
   glow = [],
+  spreadTo,
 }) => {
   const cw = cellWidthFor(fontSize);
   const ch = lineHeight(fontSize);
   const segments = buildSegments(state);
-  const {boxes, cells} = layout(segments);
+  const {boxes, cells} = layout(segments, spreadTo);
 
   const opacityFor = (id: SegmentId): number => {
     const explicit = segmentOpacity?.[id];
@@ -151,7 +160,7 @@ export const Statusline: React.FC<StatuslineProps> = ({
           segmentStyle?.(seg.id, index) ?? {};
         return (
           <React.Fragment key={seg.id}>
-            {index > 0 ? (
+            {box.separator ? (
               <div
                 style={{
                   position: 'absolute',

@@ -137,9 +137,15 @@ shellquote() {
 CMD=$(shellquote "$TARGET")
 SUB_CMD=$(shellquote "$SUB_TARGET")
 
+# The statusline reads the working tree on every render. Events alone leave
+# those counts stale while the session sits idle and a subagent writes files,
+# so the line also re-runs on a timer. Five seconds is well under the cost of
+# the two git calls and keeps the ↻ countdowns honest.
+REFRESH=5
+
 settings_snippet() {
-  jq -n --arg cmd "$CMD" --arg sub "$SUB_CMD" '{
-    statusLine: {type: "command", command: $cmd},
+  jq -n --arg cmd "$CMD" --arg sub "$SUB_CMD" --argjson every "$REFRESH" '{
+    statusLine: {type: "command", command: $cmd, refreshInterval: $every},
     subagentStatusLine: {type: "command", command: $sub}
   }'
 }
@@ -358,9 +364,9 @@ if (( PATCH_SETTINGS )); then
           step "replacing existing subagentStatusLine command ($sub_current)"
         fi
       fi
-      write_settings -n --arg cmd "$CMD" --arg sub "$SUB_CMD" \
+      write_settings -n --arg cmd "$CMD" --arg sub "$SUB_CMD" --argjson every "$REFRESH" \
         'input? // {}
-         | .statusLine = {type: "command", command: $cmd}
+         | .statusLine = {type: "command", command: $cmd, refreshInterval: $every}
          | .subagentStatusLine = {type: "command", command: $sub}'
       ok "wired up $SETTINGS$note"
       wired=1

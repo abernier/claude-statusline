@@ -8,6 +8,25 @@ number would.
 
 ### Added
 
+- **The statusline is two rows.** The first row is the checkout and what has
+  changed in it. The second row is the model, the effort, and the four bars.
+  Claude Code prints one row per line of output.
+- **What changed in the working tree, on the first row.** How many files
+  changed by kind — `1 add 3 mod 1 del 2 ?` — then the lines added and removed
+  against the last commit, `+182 -47`. The count carries the weight and the
+  color; the label stays gray. Staged and unstaged both count. A kind with no
+  files is left out, so ordinary edits read `3 mod` and a clean tree shows the
+  directory alone. The counts cost two `git` calls per render.
+- **The first row is laid out space-between.** The checkout sits on the left
+  and what changed is pushed right, so its edge lines up with the end of the
+  second row. The script measures the second row to find that column, and
+  stops at the terminal edge when the second row is wider than the terminal.
+- **A blank row between the two.** One terminal row is the smallest unit of
+  vertical space there is.
+- **The line refreshes on a timer.** The installer sets
+  `statusLine.refreshInterval` to 5 seconds. Events alone leave the file and
+  line counts stale while a subagent writes to the tree during an idle
+  session, and they keep the `↻` countdowns from moving.
 - **The reasoning effort, next to the model.** The line now reads
   `★ Opus 5 1M · high`. The five levels the CLI reports are shortened to `low`,
   `med`, `high`, `xhi` and `max`, and a model with no effort setting shows the
@@ -18,11 +37,25 @@ number would.
 
 ### Changed
 
+- **The README and the landing page follow the two rows.** "The start of the
+  line" is now "Repo and git state" and covers the folder, the branch, and what
+  changed in the tree; "What is on the line" is now "Context and limits". The
+  Fable window moves ahead of both. The landing page's docked mockup draws both
+  rows, drops the typed narration above the prompt, and boxes the prompt the way
+  Claude Code does.
+- **The rendered loops follow too.** `loop-line-start` is now the whole first
+  row: the branch still outgrows its budget and elides, and the file and line
+  counts sit on the right, holding their column while it does. The mockup grew
+  a `git` segment and a space-between layout to draw it. Every other loop
+  re-rendered byte-identical.
 - **Model names are shortened.** A leading `Claude ` is dropped and
   ` (1M context)` becomes ` 1M`, so `Opus 5 (1M context)` reads `Opus 5 1M`.
   The panel derives the same name from the model id the CLI sends there.
-- **Long directory and branch names are truncated.** The two share a 34-column
-  budget, which `STATUSLINE_LOC_MAX` overrides. While both fit, neither is
+- **Long directory and branch names are truncated.** The two share whatever
+  the first row has left after the file and line groups. Claude Code passes
+  the terminal width in `COLUMNS` (v2.1.153 or later); without it the budget
+  is a fixed 64 columns minus the groups, and it never falls below 24.
+  `STATUSLINE_LOC_MAX` overrides both. While both fit, neither is
   shortened. When they do not fit, the branch loses its namespace first, then
   its tail, then the directory is cut. Cuts land on word boundaries.
 - **The agent panel is drawn on a grid.** Every field is a column. The script

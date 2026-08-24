@@ -78,6 +78,11 @@ export type Story = {
   glow?: SegmentId[];
   /** The spend-against-clock race this loop can name. Omit where there is none. */
   race?: Race;
+  /**
+   * Lay the line out space-between over this many cells, as the script lays out
+   * its first row. Omit for a row that packs left.
+   */
+  spreadTo?: number;
   /** The line at loop progress p ∈ [0,1). */
   at: (p: number) => StatuslineState;
 };
@@ -205,13 +210,16 @@ const agents: Story = {
 };
 
 /**
- * 04 — the start of the line. A branch name types itself out until the folder
- * and the branch run out of budget and the ladder starts eliding, then the
- * folder changes too and the model and the effort change with it.
+ * 05 — repo and git state: the whole first row. A branch name types itself out
+ * until the folder and the branch run out of budget and the ladder starts
+ * eliding, then the folder changes and a different tree's counts come with it.
  *
- * Ported from the page (docs/index.html, story 04) — the cue points are the
- * same numbers. Change one, change the other. The trimming itself is not in
- * here: `fitLocation()` in segments.ts does it, the way the script does.
+ * Ported from the page (docs/index.html, story 05) — the cue points are the
+ * same numbers. Change one, change the other. The page's copy of the story also
+ * carries a model and an effort, because its docked line draws the second row
+ * too; this loop is the first row alone, so it carries neither. The trimming
+ * itself is not in here: `fitLocation()` in segments.ts does it, the way the
+ * script does.
  */
 const LONG_BRANCH = 'feature/context-window-bar-redesign';
 /** Where the typing stops, the effort drops, the project changes, and the loop seams. */
@@ -219,30 +227,47 @@ const TYPED_AT = 0.46;
 const SWITCH_AT = 0.76;
 const START_SEAM_AT = 0.94;
 
+/**
+ * The cell count the row spreads over — the row's width on every frame, so the
+ * folder never moves and neither do the counts. It has to clear the widest
+ * frame or the row falls back to packing left and jumps: the location takes the
+ * whole 34-cell budget and the widest counts here are 35 cells, so 34 + 35
+ * leaves a four-cell gap at the tightest moment of the loop.
+ */
+const HEAD_CELLS = 34 + 35 + 4;
+
+/**
+ * The tree the loop starts in, and the one it changes to at the switch. The
+ * first is the same state the page's docked line shows (DEFAULTS in
+ * docs/index.html) — change one, change the other.
+ */
+const OWN_TREE = {add: 1, mod: 4, del: 1, untracked: 1, insertions: 232, deletions: 54};
+const OTHER_TREE = {add: 2, mod: 9, del: 1, insertions: 1204, deletions: 318};
+
 const lineStart: Story = {
   id: 'line-start',
   slug: 'loop-line-start',
-  summary: 'a branch name outgrowing its budget, and the model and effort changing',
+  summary: 'a branch name outgrowing its budget, beside what changed in the tree',
+  spreadTo: HEAD_CELLS,
   at: (p) => {
-    const head = {dir: 'claude-statusline', branch: 'main', model: 'Opus 5 1M', effort: 'high'};
+    const head = {dir: 'claude-statusline', branch: 'main', git: OWN_TREE};
     if (p >= START_SEAM_AT) return head;
     if (p >= SWITCH_AT) {
       return {
         ...head,
         dir: 'acme-platform-web-frontend',
         branch: LONG_BRANCH,
-        model: 'Sonnet 5',
-        effort: 'med',
+        git: OTHER_TREE,
       };
     }
-    if (p >= TYPED_AT) return {...head, branch: LONG_BRANCH, effort: 'low'};
+    if (p >= TYPED_AT) return {...head, branch: LONG_BRANCH};
     const typed = Math.round(4 + (LONG_BRANCH.length - 4) * (p / TYPED_AT));
     return {...head, branch: LONG_BRANCH.slice(0, Math.max(4, typed))};
   },
 };
 
 /**
- * 05 — the Fable weekly quota, spent long before the week is over.
+ * 04 — the Fable weekly quota, spent long before the week is over.
  *
  * Usage runs to 100% in the first half of the loop and then just sits there:
  * nothing gives the quota back except the weekly reset, so the only thing still
@@ -310,7 +335,7 @@ const wholeLine: Story = {
 };
 
 /** Walkthrough order — the same order the page's sections run in. */
-export const STORIES: Story[] = [burn, context, agents, lineStart, fable, wholeLine];
+export const STORIES: Story[] = [burn, context, agents, fable, lineStart, wholeLine];
 
 export const storyById = (id: string): Story => {
   const story = STORIES.find((s) => s.id === id);

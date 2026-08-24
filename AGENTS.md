@@ -6,7 +6,11 @@ A single-file Bash statusline for Claude Code (`statusline.sh`).
 
 `remotion/` is a separate npm sub-project (React + Remotion, `node_modules` gitignored) that rebuilds the statusline as an animatable terminal mockup for the landing page and README. `statusline.sh` is the source of truth for its palette, thresholds and bar geometry — change one, change the other.
 
-The location budget - how a long folder or branch name is shortened - is implemented three times: `statusline.sh` (which counts terminal columns), `fitLocation()` in `docs/index.html`, and `fitLocation()` in `remotion/src/statusline/segments.ts`. Change one, change the others.
+The location budget - how a long folder or branch name is shortened - is implemented three times: `statusline.sh`, `fitLocation()` in `docs/index.html`, and `fitLocation()` in `remotion/src/statusline/segments.ts`. The ladder is the same in all three - change one, change the others - but the budget it spends is not. The script derives it from the terminal, sizing the first row against `COLUMNS` minus the file and line groups. The two mockups draw on a fixed canvas with no terminal to ask, so both hold `LOC_MAX` at 34, which is what the elision loop was authored against.
+
+The first row is space-between: the folder and the branch on the left, what changed in the tree pushed right so that its edge lands on the second row's last column. The script pads with spaces to that column, `docs/index.html` gives the two rows one width and lets flex do it, and `remotion/src/statusline/segments.ts` spreads over a fixed cell count (`spreadTo`). What the row shows - the file kinds, their colours, the two-space gap between them - is written in all three. Change one, change the others.
+
+The docked line's working-tree state (`DEFAULTS` in `docs/index.html`) and the `line-start` loop's opening state (`OWN_TREE` in `remotion/src/stories.ts`) are the same numbers on purpose. Change one, change the other.
 
 The annotation over a bar — the racers named, the gap read out, the effort row — is drawn twice: by `annotate()` in `docs/index.html` and by `remotion/src/statusline/Annotation.tsx`. The page measures the painted bar, the render computes it from `theme.ts`, and both carry the same pixel constants. Change one, change the other.
 

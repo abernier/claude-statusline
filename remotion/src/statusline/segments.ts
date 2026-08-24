@@ -1,6 +1,7 @@
 import {colors, ctxColor, paceColor, pctColor} from '../theme';
 import type {
   AgentRow,
+  GitState,
   LimitWindow,
   Part,
   Segment,
@@ -94,6 +95,45 @@ const limitSegment = (
 };
 
 /**
+ * The working-tree segment: files by kind, then lines against the last commit.
+ * The count carries the weight and the colour and the label stays dim, so a row
+ * of counts reads as numbers first. Two spaces divide one kind from the next
+ * against the one inside each, which is what binds a count to its label.
+ *
+ * A kind at zero is left out, so the common case — a few edits and nothing else
+ * — draws `3 mod` rather than a row of zeroes. Untracked files carry no line
+ * counts, so a tree holding nothing but new files draws the kinds alone.
+ */
+const KIND_GAP = '  ';
+
+const gitSegment = (git: GitState): Segment | null => {
+  const kinds: Array<[number | undefined, string, string]> = [
+    [git.add, 'add', colors.green],
+    [git.mod, 'mod', colors.yellow],
+    [git.del, 'del', colors.red],
+    [git.untracked, '?', colors.dim],
+  ];
+  const parts: Part[] = [];
+  for (const [count, label, color] of kinds) {
+    if (!count) continue;
+    if (parts.length) parts.push({kind: 'text', text: KIND_GAP, color: colors.dim});
+    parts.push({kind: 'text', text: String(count), color, bold: true});
+    parts.push({kind: 'text', text: ` ${label}`, color: colors.dim});
+  }
+  const lines: Part[] = [];
+  if (git.insertions)
+    lines.push({kind: 'text', text: `+${git.insertions}`, color: colors.green, bold: true});
+  if (git.deletions) {
+    if (lines.length) lines.push({kind: 'text', text: ' ', color: colors.dim});
+    lines.push({kind: 'text', text: `-${git.deletions}`, color: colors.red, bold: true});
+  }
+  if (parts.length && lines.length)
+    parts.push({kind: 'text', text: ' │ ', color: colors.sep});
+  parts.push(...lines);
+  return parts.length ? segment('git', parts) : null;
+};
+
+/**
  * statusline.sh's location budget: the folder and the branch share a column
  * count. While both fit, neither is shortened. When they do not fit, the branch
  * loses its namespace first, then its tail, then the folder is cut. The same
@@ -157,6 +197,11 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
       }
     }
     segments.push(segment('dir', parts));
+  }
+
+  if (state.git) {
+    const git = gitSegment(state.git);
+    if (git) segments.push(git);
   }
 
   if (state.model) {
@@ -254,23 +299,47 @@ export const agentColumns = (rows: AgentRow[]): AgentColumns => {
 /** ` │ ` — the separator the script puts between segments. */
 export const SEPARATOR_CELLS = 3;
 
-export type SegmentBox = {id: Segment['id']; start: number; cells: number};
+export type SegmentBox = {
+  id: Segment['id'];
+  start: number;
+  cells: number;
+  /** Whether a ` │ ` is drawn before this segment. False across a spread gap. */
+  separator: boolean;
+};
 
 /**
  * Column offset of every segment, separators included. Frame-exact and DOM-free,
  * so the camera can target a segment by id at any zoom.
+ *
+ * `spreadTo` lays the row out space-between over that many cells, the way the
+ * script lays out its first row: the first segment stays at column 0 and the
+ * rest are pushed right to end on the last column. The gap does the separating,
+ * so no ` │ ` is drawn across it. A row too wide to spread falls back to packing
+ * left, which is the script's own behaviour when the gap would close.
  */
 export const layout = (
-  segments: Segment[]
+  segments: Segment[],
+  spreadTo?: number
 ): {boxes: SegmentBox[]; cells: number} => {
   const boxes: SegmentBox[] = [];
   let column = 0;
   segments.forEach((seg, index) => {
     if (index > 0) column += SEPARATOR_CELLS;
-    boxes.push({id: seg.id, start: column, cells: seg.cells});
+    boxes.push({id: seg.id, start: column, cells: seg.cells, separator: index > 0});
     column += seg.cells;
   });
-  return {boxes, cells: column};
+  if (spreadTo === undefined || segments.length < 2) return {boxes, cells: column};
+
+  const tail = boxes.slice(1);
+  const tailCells = column - tail[0].start;
+  const gap = spreadTo - boxes[0].cells - tailCells;
+  if (gap < 1) return {boxes, cells: column};
+  const shift = gap - SEPARATOR_CELLS;
+  tail.forEach((box) => {
+    box.start += shift;
+  });
+  tail[0].separator = false;
+  return {boxes, cells: spreadTo};
 };
 
 /**

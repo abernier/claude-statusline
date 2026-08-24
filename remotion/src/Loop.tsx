@@ -90,7 +90,12 @@ export const Loop: React.FC<LoopProps> = ({
           {state.agents ? (
             <AgentPanel rows={state.agents} fontSize={fontSize} />
           ) : (
-            <Statusline state={state} fontSize={fontSize} glow={story.glow ?? []} />
+            <Statusline
+              state={state}
+              fontSize={fontSize}
+              glow={story.glow ?? []}
+              spreadTo={story.spreadTo}
+            />
           )}
           {race ? (
             <Annotation
