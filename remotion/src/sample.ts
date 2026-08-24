@@ -19,7 +19,8 @@ export const SAMPLE_FIVE_ELAPSED = 22;
 export const SAMPLE_STATE: StatuslineState = {
   dir: 'claude-statusline',
   branch: 'main',
-  model: 'Opus 5',
+  model: 'Opus 5 1M',
+  effort: 'high',
   ctx: 19,
   ctxTokens: ctxTokens(19),
   five: {

@@ -4,6 +4,67 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-08-24
+
+### Added
+
+- **The reasoning effort, next to the model.** The line now reads
+  `★ Opus 5 1M · high`. The five levels the CLI reports are shortened to `low`,
+  `med`, `high`, `xhi` and `max`, and a model with no effort setting shows the
+  name alone.
+- Each agent-panel row carries the same pair, between its token count and its
+  description. On a narrow panel, the effort column drops first and the model
+  column second, so the description keeps its room.
+
+### Changed
+
+- **Model names are shortened.** A leading `Claude ` is dropped and
+  ` (1M context)` becomes ` 1M`, so `Opus 5 (1M context)` reads `Opus 5 1M`.
+  The panel derives the same name from the model id the CLI sends there.
+- **Long directory and branch names are truncated.** The two share a 34-column
+  budget, which `STATUSLINE_LOC_MAX` overrides. While both fit, neither is
+  shortened. When they do not fit, the branch loses its namespace first, then
+  its tail, then the directory is cut. Cuts land on word boundaries.
+- **The agent panel is drawn on a grid.** Every field is a column. The script
+  reads the whole payload first, measures the name, model, and effort columns
+  across all the rows, and pads to them, so the bars, numbers, and descriptions
+  line up whatever the agent names are. A column is dropped for every row at
+  once, never for one row alone. Both mockups measure the same widths.
+- The agent-panel loop is rendered wider (1680px) to hold the two new fields,
+  and its crop on the landing page is wide for the same reason.
+- **The walkthrough is re-cut.** The agent panel moves up to 03. A new 04,
+  "The start of the line", shows the folder, branch, model, and effort as a
+  loop: a branch name grows until it no longer fits, is cut, and then the
+  folder is cut too as the model and effort change. "When a window resets" is
+  gone. The Fable section shows the same turnover, and the fact that section
+  carried - both halves drop to zero and the countdown restarts - now sits in
+  01. Each section is down to a line or two, and the loops show the rest. The
+  README follows the same order. `loop-reset` is no longer rendered. Its files
+  stay in `docs/assets/`, where a frozen prototype still points at them.
+
+### Fixed
+
+- A non-object `effort` in the statusline JSON no longer takes the whole line
+  down with it, and a model display name starting with `-` is no longer eaten
+  as an `echo` flag.
+- `STATUSLINE_LOC_MAX` is checked before it reaches an arithmetic context, so a
+  typo can neither disable trimming with an error nor evaluate as an
+  expression.
+- The location budget is spent in full when the branch is short or absent, and
+  it counts the worktree glyph `⎇+`, which is a column wider than `⎇`.
+- The panel survives a non-integer `columns` (a failed arithmetic assignment
+  used to abort the script and blank the panel), skips a task with no id
+  instead of shifting every field by one, keeps the effort label for an agent
+  whose model is unknown, and no longer reserves description room on a row that
+  has no description.
+- The model id parser reads `claude-3-opus-…` as `Opus 3` rather than
+  `Opus 20240229`, and keeps a two-digit minor version.
+- Widths are counted in terminal columns, not characters: a CJK or emoji name
+  takes two columns per glyph, which the budget and the panel's columns now
+  spend correctly. Under a non-UTF-8 locale, where bash counts bytes, a
+  non-ASCII name is left whole rather than cut mid-sequence.
+- An empty payload no longer writes a `jq` error to stderr.
+
 ## 2026-08-22
 
 ### Changed

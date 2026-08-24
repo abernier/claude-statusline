@@ -1,7 +1,7 @@
 import React from 'react';
 import {cellWidth as cellWidthFor, fontFamily, lineHeight} from '../theme';
 import {Bar} from './Bar';
-import {buildAgentRow, partCells} from './segments';
+import {agentColumns, buildAgentRow, partCells} from './segments';
 import {TextRun} from './Statusline';
 import type {AgentRow, Part} from './types';
 
@@ -14,8 +14,10 @@ const ROW_GAP_RATIO = 0.85;
 /**
  * The agent panel, as subagent-statusline.sh draws it: one row per running
  * subagent, each with its own context bar. The rows sit on the same cell grid
- * as the statusline, and the name column is padded to the longest name so the
- * bars align — the page does the same with a fixed-width `.aname` column.
+ * as the statusline, and every variable-width column — name, model, effort —
+ * is padded to its widest row, so each field starts in one column down the
+ * panel. The script measures the same widths off its payload, and the page
+ * spends them as a min-width.
  */
 export const AgentPanel: React.FC<{
   rows: AgentRow[];
@@ -24,9 +26,9 @@ export const AgentPanel: React.FC<{
   const cw = cellWidthFor(fontSize);
   const ch = lineHeight(fontSize);
   const gap = ROW_GAP_RATIO * fontSize;
-  const nameCells = Math.max(...rows.map((row) => [...row.name].length));
+  const widths = agentColumns(rows);
 
-  const parts = rows.map((row) => buildAgentRow(row, nameCells));
+  const parts = rows.map((row) => buildAgentRow(row, widths));
   const rowCells = (row: Part[]): number =>
     row.reduce((sum, part) => sum + partCells(part), 0);
   const cells = Math.max(...parts.map(rowCells));

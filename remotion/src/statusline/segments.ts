@@ -94,6 +94,49 @@ const limitSegment = (
 };
 
 /**
+ * statusline.sh's location budget: the folder and the branch share a column
+ * count. While both fit, neither is shortened. When they do not fit, the branch
+ * loses its namespace first, then its tail, then the folder is cut. The same
+ * ladder runs in `fitLocation()` on the landing page — change one, change the
+ * other. The script counts terminal columns; these names are ASCII, where
+ * characters and columns agree.
+ */
+const LOC_MAX = 34;
+const LOC_GLUE = 3; // the " ⎇ " between the two
+const BRANCH_FLOOR = 12;
+const FOLDER_FLOOR = 10;
+
+/** Cut at the word boundary nearest the limit, unless it costs more than 3. */
+const wordTrim = (text: string, cells: number): string => {
+  if (text.length <= cells) return text;
+  const cut = text.slice(0, cells - 1);
+  const at = Math.max(
+    cut.lastIndexOf('-'),
+    cut.lastIndexOf('_'),
+    cut.lastIndexOf('.'),
+    cut.lastIndexOf('/')
+  );
+  return (at >= 4 && at >= cut.length - 3 ? cut.slice(0, at) : cut) + '…';
+};
+
+export const fitLocation = (dir: string, branch: string): [string, string] => {
+  const glue = branch ? LOC_GLUE : 0;
+  if (dir.length + branch.length + glue <= LOC_MAX) return [dir, branch];
+  const short = branch.includes('/')
+    ? `${branch[0]}/${branch.split('/').pop()}`
+    : branch;
+  const room = LOC_MAX - dir.length - glue;
+  if (room >= short.length || room >= BRANCH_FLOOR) {
+    return [dir, wordTrim(short, room)];
+  }
+  const branchCells = Math.min(short.length, BRANCH_FLOOR);
+  return [
+    wordTrim(dir, Math.max(LOC_MAX - glue - branchCells, FOLDER_FLOOR)),
+    wordTrim(short, branchCells),
+  ];
+};
+
+/**
  * Build the segment list in the same order, colours and thresholds as
  * statusline.sh. Callers animate by passing a different state per frame.
  * Omitting a field drops its segment (separators included) — the script's own
@@ -103,24 +146,28 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
   const segments: Segment[] = [];
 
   if (state.dir) {
-    const parts: Part[] = [{kind: 'text', text: state.dir, color: colors.dir}];
-    if (state.branch) {
+    const [dir, branch] = fitLocation(state.dir, state.branch ?? '');
+    const parts: Part[] = [{kind: 'text', text: dir, color: colors.dir}];
+    if (branch) {
       if (state.worktree) {
         parts.push({kind: 'text', text: ' ⎇+', color: colors.amber});
-        parts.push({kind: 'text', text: ` ${state.branch}`, color: colors.dim});
+        parts.push({kind: 'text', text: ` ${branch}`, color: colors.dim});
       } else {
-        parts.push({kind: 'text', text: ` ⎇ ${state.branch}`, color: colors.dim});
+        parts.push({kind: 'text', text: ` ⎇ ${branch}`, color: colors.dim});
       }
     }
     segments.push(segment('dir', parts));
   }
 
   if (state.model) {
-    segments.push(
-      segment('model', [
-        {kind: 'text', text: `★ ${state.model}`, color: colors.green},
-      ])
-    );
+    const parts: Part[] = [
+      {kind: 'text', text: `★ ${state.model}`, color: colors.green},
+    ];
+    if (state.effort) {
+      parts.push({kind: 'text', text: ' · ', color: colors.sep});
+      parts.push({kind: 'text', text: state.effort, color: colors.dim});
+    }
+    segments.push(segment('model', parts));
   }
 
   if (state.ctx !== undefined) {
@@ -158,18 +205,50 @@ export const buildSegments = (state: StatuslineState): Segment[] => {
  * name is padded to a fixed column so the rows' bars align, and the tokens
  * are the same reading as the percentage, derived against a 1M window.
  */
-export const buildAgentRow = (row: AgentRow, nameCells: number): Part[] => {
+export const buildAgentRow = (row: AgentRow, widths: AgentColumns): Part[] => {
   const pct = Math.round(row.ctx);
   const color = ctxColor(pct);
-  return [
-    {kind: 'text', text: row.name.padEnd(nameCells), color: colors.dir},
+  const parts: Part[] = [
+    {kind: 'text', text: row.name.padEnd(widths.name), color: colors.dir},
     {kind: 'text', text: ' ', color: colors.dim},
     {kind: 'bar', pct, width: BAR_CELLS, color},
     {kind: 'text', text: ` ${pctField(pct)}`, color},
     {kind: 'text', text: ` ${tokensField((pct / 100) * 1000000)}`, color: colors.dim},
-    {kind: 'text', text: ' · ', color: colors.sep},
-    {kind: 'text', text: row.desc, color: colors.dim},
   ];
+  // The script prints the model and the effort between the meter and the
+  // description, each behind its own dot and padded to its column, so a row
+  // missing one still starts its description where the others do.
+  for (const [field, cells] of [
+    [row.model, widths.model],
+    [row.effort, widths.effort],
+  ] as const) {
+    if (!cells) continue;
+    if (field) {
+      parts.push({kind: 'text', text: ' · ', color: colors.sep});
+      parts.push({kind: 'text', text: field.padEnd(cells), color: colors.dim});
+    } else {
+      parts.push({kind: 'text', text: ' '.repeat(SEPARATOR_CELLS + cells), color: colors.dim});
+    }
+  }
+  parts.push({kind: 'text', text: ' · ', color: colors.sep});
+  parts.push({kind: 'text', text: row.desc, color: colors.dim});
+  return parts;
+};
+
+/**
+ * The panel's column widths, measured across every row — the script does the
+ * same in one pass over the payload before it draws anything.
+ */
+export type AgentColumns = {name: number; model: number; effort: number};
+
+export const agentColumns = (rows: AgentRow[]): AgentColumns => {
+  const widest = (pick: (row: AgentRow) => string | undefined): number =>
+    Math.max(0, ...rows.map((row) => [...(pick(row) ?? '')].length));
+  return {
+    name: widest((row) => row.name),
+    model: widest((row) => row.model),
+    effort: widest((row) => row.effort),
+  };
 };
 
 /** ` │ ` — the separator the script puts between segments. */

@@ -21,7 +21,10 @@ ENTRY=src/index.ts
 OUT=../docs/assets
 
 # Keep in step with src/compositions.ts, which is where the geometry lives.
-LOOPS=(loop-burn loop-context loop-reset loop-fable loop-whole-line loop-agents)
+# `loop-reset` is not here any more: the walkthrough dropped that section, and
+# the Fable loop tells the same story. Its rendered files stay in docs/assets/
+# because the frozen prototype in prototypes/ still points at them.
+LOOPS=(loop-burn loop-context loop-agents loop-line-start loop-fable loop-whole-line)
 STILLS=(social-preview)
 
 mkdir -p "$OUT"

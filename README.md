@@ -14,8 +14,8 @@
 
 One bash script. Each limit bar shows two things: how much you have used, and
 how much time has passed. If usage is ahead of time, drop an effort level. If it
-is behind, you can raise it. Your folder, branch, model and context window sit
-on the same line, under the prompt.
+is behind, you can raise it. Your folder, branch, model, effort and context
+window sit on the same line, under the prompt.
 
 <br>
 
@@ -136,7 +136,21 @@ Left to right:
   claude-statusline ⎇ main          ← the main checkout
   claude-statusline-fix ⎇+ fix/bar  ← a linked worktree
   ```
-- **★ Model** — the active model's display name
+
+  The two share a 34-column budget. While both fit, neither is shortened. When
+  they do not fit, the branch loses its namespace first, then its tail, then
+  the directory is cut:
+
+  ```text
+  claude-statusline ⎇ f/context-win…   ← feature/context-window-bar-redesign
+  acme-platform-web… ⎇ a/issue-214…    ← alp82/issue-214-truncate-long-names
+  ```
+
+  To change the budget, set `STATUSLINE_LOC_MAX`. Widths are measured in
+  terminal columns: a CJK or emoji glyph counts as two.
+- **★ Model · effort** — the active model, shortened (`Opus 5 (1M context)`
+  becomes `Opus 5 1M`), and the reasoning effort: `low`, `med`, `high`, `xhi`,
+  or `max`. A model without an effort setting shows the name alone.
 - **Ctx** — how full the context window is, 0–100%, and the token count in
   thousands
 - **5h / 7d** — the 5-hour and 7-day rate-limit windows: usage, elapsed time,
@@ -150,12 +164,10 @@ Left to right:
 
 ![The 5h bar: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens at low effort. The clock overtakes it and the bar turns yellow, then green. A row under the bar records the effort level for each tenth of the window.](docs/assets/loop-burn.gif)
 
-The top half of each bar shows usage. The bottom half shows elapsed time.
+The top half of each bar shows usage. The bottom half shows elapsed time. When
+the bar turns red, lower the effort level.
 
-If usage is ahead of time, you run out before the window resets. Drop an effort
-level to slow the spend. The loop above shows this: high effort until usage
-passes the clock, then low effort, and the clock catches up again. If usage is
-behind, you have quota to spare and can raise the effort.
+At the reset, both halves drop to zero and the countdown restarts at 5h0m.
 
 #### Colors
 
@@ -171,25 +183,31 @@ The number color shows usage: 🟩 under 50% · 🟨 50–80% · 🟥 over 80%
 
 ![The Ctx bar filling to 78%, turning yellow then red, then compacting back down to the summary.](docs/assets/loop-context.gif)
 
-The bar turns yellow at 25% and red at 50%. The thresholds are lower than on
-the limit bars, because a full context window stops you at once. The bar fills
-in eighths of a character, so it moves before the number changes.
+The bar turns yellow at 25% and red at 50%. Start a new session at yellow.
+Answers get worse as the window fills.
 
-### When a window resets
+### The agent panel
 
-![The 5h bar with the gap read out, creeping up, dropping to zero the instant the window resets, then climbing back.](docs/assets/loop-reset.gif)
+Claude Code lists running subagents below the prompt. Each subagent shows its
+own context bar, model, and effort.
 
-When a 5-hour window ends, both halves drop to zero and the countdown restarts
-at 5h0m. The top half stays green here, because usage trails the clock the
-whole time.
+![Three agent rows, each with its own context bar, model and effort: one holds at 34%, one climbs into red, one starts late and stays green.](docs/assets/loop-agents.gif)
+
+On a narrow panel, the effort column drops first and the model column second.
+Requires Claude Code v2.1.205 or later.
+
+### The start of the line
+
+![The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and the model and effort change.](docs/assets/loop-line-start.gif)
+
+Long folder and branch names are cut to fit. The model and the effort follow.
 
 ### The Fable window
 
 ![The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
 
-Fable has its own weekly quota. It refills only at the weekly reset, so the
-blue half tells you how long the wait is. It resets with the 7-day window, so
-it shows no `↻` of its own.
+Fable has its own weekly quota. The limit is usually lower than for other
+models. Fable resets with the 7-day window, so it shows no `↻` of its own.
 
 Claude Code does not send this value. The script reads it from `~/.claude.json`
 and refreshes it from the API in the background, at most every ten minutes.
@@ -199,20 +217,6 @@ Code stores it there instead of in `~/.claude/.credentials.json`. The first
 read can open a Keychain dialog. Click **Always Allow** once and it stops
 asking. To skip the Keychain, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1`. The Fable
 bar then uses only the CLI's own cache.
-
-### The agent panel
-
-When subagents run, Claude Code lists them in a panel below the prompt. The
-second script, `subagent-statusline.sh`, replaces each row with the agent's
-own context bar:
-
-![Three agent rows, each with its own context bar: one holds at 34%, one climbs into red, one starts late and stays green.](docs/assets/loop-agents.gif)
-
-Same palette, same thresholds as the `Ctx` bar: yellow at 25%, red at 50%. A
-subagent near its limit returns thin results, so the red row tells you which
-answer to distrust before it arrives. An agent whose model is not resolved yet
-has no window size, so its row shows the token count only. Needs Claude Code
-v2.1.205 or later.
 
 ## Requirements
 
@@ -231,6 +235,11 @@ CLI's cached copy in `~/.claude.json`. When that copy is stale, it calls
 The agent panel works the same way: Claude Code sends the visible subagent
 rows to `subagent-statusline.sh` as one JSON object, and the script answers
 with one replacement row per agent.
+
+The main line uses the model's display name from the payload. The panel
+receives a model id and derives the short name from it. Effort also comes from
+the payload, on the versions that send it and for the models that support it.
+Without it, the line shows the model name alone.
 
 Changes are listed in the [changelog](CHANGELOG.md).
 

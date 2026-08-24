@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code statusline: dir ⎇branch │ ★ Model │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
+# Claude Code statusline: dir ⎇branch │ ★ Model · effort │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
 # Reads the statusline JSON from stdin (see https://code.claude.com/docs/en/statusline.md)
 
 input=$(cat)
@@ -8,10 +8,11 @@ input=$(cat)
 # empty field would shift every value after it. `d` keeps the text fields
 # non-empty. A path cannot hold U+001F, so it stands in for "no directory"
 # and is cleared right after the read.
-IFS=$'\t' read -r model dir version ctx_pct ctx_tokens five_pct five_reset week_pct week_reset <<<"$(jq -r '
+IFS=$'\t' read -r model effort dir version ctx_pct ctx_tokens five_pct five_reset week_pct week_reset <<<"$(jq -r '
 def d($fallback): if (. // "") == "" then $fallback else . end;
 [
   (.model.display_name | d("?")),
+  ((.effort | objects | .level) // "" | d("\u001f")),
   (.workspace.current_dir // .cwd | d("\u001f")),
   (.version | d("2.1.211")),
   (.context_window.used_percentage // -1 | round),
@@ -22,6 +23,7 @@ def d($fallback): if (. // "") == "" then $fallback else . end;
   (.rate_limits.seven_day.resets_at // 0)
 ] | @tsv' <<<"$input")"
 [[ $dir == $'\x1f' ]] && dir=""
+[[ $effort == $'\x1f' ]] && effort=""   # absent for models without an effort setting
 
 # --- Fable weekly window: not in the statusline JSON. Primary source is the
 # CLI's own persisted copy of its last successful /api/oauth/usage fetch
@@ -184,6 +186,106 @@ fmt_reset() {
   fi
 }
 
+# --- display width. A terminal counts columns; bash counts characters. CJK
+# and emoji take two columns, and under a non-UTF-8 locale bash counts bytes,
+# where cutting a string mid-sequence would write invalid UTF-8 to the
+# terminal. `UTF8` records whether this shell sees characters at all. ASCII,
+# which is almost every name, skips the whole thing.
+utf8_probe='ää'
+[[ ${#utf8_probe} == 2 ]] && UTF8=1 || UTF8=''
+
+is_ascii() { [[ $1 != *[^\ -~]* ]]; }
+
+# wide <codepoint> — the ranges a terminal draws two columns wide
+wide() {
+  local c=$1
+  (( c >= 0x1100 )) || return 1
+  (( c <= 0x115f || c == 0x2329 || c == 0x232a \
+     || ( c >= 0x2e80 && c <= 0xa4cf && c != 0x303f ) \
+     || ( c >= 0xac00 && c <= 0xd7a3 ) || ( c >= 0xf900 && c <= 0xfaff ) \
+     || ( c >= 0xfe30 && c <= 0xfe6f ) || ( c >= 0xff00 && c <= 0xff60 ) \
+     || ( c >= 0xffe0 && c <= 0xffe6 ) || ( c >= 0x1f300 && c <= 0x1faff ) \
+     || ( c >= 0x20000 && c <= 0x3fffd ) ))
+}
+
+# vis_len <string> — how many columns the string occupies
+vis_len() {
+  local s=$1 n=0 i cp
+  if is_ascii "$s" || [[ -z $UTF8 ]]; then echo "${#s}"; return; fi
+  for (( i = 0; i < ${#s}; i++ )); do
+    printf -v cp '%d' "'${s:i:1}"
+    if wide "$cp"; then n=$(( n + 2 )); else n=$(( n + 1 )); fi
+  done
+  echo "$n"
+}
+
+# vis_cut <string> <columns> — the longest prefix that fits in that many
+# columns. A shell that cannot see characters leaves a multibyte string whole
+# rather than splitting a sequence in half.
+vis_cut() {
+  local s=$1 max=$2
+  is_ascii "$s" && { echo "${s:0:max}"; return; }
+  [[ -z $UTF8 ]] && { echo "$s"; return; }
+  local n=0 i cp w out=''
+  for (( i = 0; i < ${#s}; i++ )); do
+    printf -v cp '%d' "'${s:i:1}"
+    w=1; wide "$cp" && w=2
+    (( n + w > max )) && break
+    out+=${s:i:1}; n=$(( n + w ))
+  done
+  echo "$out"
+}
+
+# short_model <display_name> — "Claude Opus 4.8" -> "Opus 4.8",
+# "Opus 5 (1M context)" -> "Opus 5 1M". The CLI builds the long form by
+# appending " (1M context)" to a registry display_name whenever the model id
+# carries the [1m] suffix, so undoing exactly that is safe.
+short_model() {
+  local m=${1#Claude }
+  # printf, not echo: a display name of "-e" or "-n" would be eaten as a flag
+  printf '%s' "${m/ (1M context)/ 1M}"
+}
+
+# effort_label <level> — the five levels the CLI sends, short enough to sit
+# next to the model name
+effort_label() {
+  case $1 in
+    low)    echo "low"  ;;
+    medium) echo "med"  ;;
+    high)   echo "high" ;;
+    xhigh)  echo "xhi"  ;;
+    max)    echo "max"  ;;
+    *)      echo ""     ;;
+  esac
+}
+
+# word_trim <string> <max> — shorten to <max> columns, cutting at the word
+# boundary nearest the limit. A boundary further back than 3 columns throws
+# away more than it saves, so that falls through to a hard cut.
+word_trim() {
+  local s=$1 n=$2
+  (( $(vis_len "$s") <= n )) && { printf '%s' "$s"; return; }
+  local cut best="" i
+  cut=$(vis_cut "$s" $(( n - 1 )))            # the … takes the last column
+  [[ $cut == "$s" ]] && { printf '%s' "$s"; return; }   # nothing safe to cut
+  for (( i = ${#cut}; i >= 4; i-- )); do
+    [[ ${cut:i:1} == [-_./] ]] && { best=${cut:0:i}; break; }
+  done
+  (( ${#best} < ${#cut} - 3 )) && best=$cut
+  printf '%s' "${best}…"
+}
+
+# The project and the branch share one column budget. Nothing is shortened
+# while both fit; past that the branch gives up its namespace, then its tail,
+# and only then does the project give up anything.
+# Anything but digits here would be evaluated as an arithmetic expression, so
+# it is checked before it ever reaches (( )).
+LOC_MAX=${STATUSLINE_LOC_MAX:-34}
+[[ $LOC_MAX =~ ^[0-9]+$ ]] || LOC_MAX=34
+LOC_GLUE=3          # the " ⎇ " between the two
+BRANCH_FLOOR=12     # the shortest branch worth printing
+PROJECT_FLOOR=10    # the shortest project worth printing
+
 segs=()
 
 # directory + git branch. A linked worktree's private git dir holds a
@@ -192,11 +294,46 @@ segs=()
 # one absolute and one relative from a subdirectory. In a worktree the glyph
 # becomes an amber ⎇+ instead of ⎇.
 if [[ -n "$dir" ]]; then
-  loc="\033[38;5;74m$(basename "$dir")"
+  project=$(basename "$dir")
   branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+
+  # ⎇+ is one column wider than ⎇, and with no branch there is no glyph at
+  # all, so the project gets the whole budget
+  worktree=""
   if [[ -n "$branch" ]]; then
     gd=$(git -C "$dir" rev-parse --absolute-git-dir 2>/dev/null)
-    if [[ -n "$gd" && -f "$gd/commondir" ]]; then
+    [[ -n "$gd" && -f "$gd/commondir" ]] && worktree=1
+  fi
+  glue=0
+  if [[ -n "$branch" ]]; then
+    glue=$LOC_GLUE
+    [[ -n "$worktree" ]] && glue=$(( LOC_GLUE + 1 ))
+  fi
+
+  # spend the budget one step at a time, stopping as soon as the pair fits
+  pw=$(vis_len "$project") bw=$(vis_len "$branch")
+  if (( pw + bw + glue > LOC_MAX )); then
+    if [[ $branch == */* ]]; then
+      branch="${branch:0:1}/${branch##*/}"          # feature/x -> f/x
+      bw=$(vis_len "$branch")
+    fi
+    room=$(( LOC_MAX - pw - glue ))
+    if (( room >= bw || room >= BRANCH_FLOOR )); then
+      branch=$(word_trim "$branch" "$room")
+    else
+      # neither fits: the branch takes its floor, or its own width if that is
+      # less, and the project takes the rest
+      (( bw > BRANCH_FLOOR )) && bw=$BRANCH_FLOOR
+      room=$(( LOC_MAX - glue - bw ))
+      (( room < PROJECT_FLOOR )) && room=$PROJECT_FLOOR
+      project=$(word_trim "$project" "$room")
+      branch=$(word_trim "$branch" "$bw")
+    fi
+  fi
+
+  loc="\033[38;5;74m${project}"
+  if [[ -n "$branch" ]]; then
+    if [[ -n "$worktree" ]]; then
       loc+=" ${AMBER}⎇+ ${DIM}${branch}"
     else
       loc+=" ${DIM}⎇ ${branch}"
@@ -205,7 +342,10 @@ if [[ -n "$dir" ]]; then
   segs+=("${loc}${RESET}")
 fi
 
-segs+=("\033[38;2;140;194;74m★ ${model}${RESET}")
+seg="\033[38;2;140;194;74m★ $(short_model "$model")${RESET}"
+eff=$(effort_label "$effort")
+[[ -n "$eff" ]] && seg+=" ${SEP}·${RESET} ${DIM}${eff}${RESET}"
+segs+=("$seg")
 
 if (( ctx_pct >= 0 )); then
   seg="${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color)"

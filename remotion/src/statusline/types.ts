@@ -27,6 +27,10 @@ export type AgentRow = {
   /** The agent's own context usage, 0–100. Tokens are derived from it. */
   ctx: number;
   desc: string;
+  /** The agent's model, already shortened. Omit to hide it and the effort. */
+  model?: string;
+  /** The agent's effort level. Omit to hide. */
+  effort?: string;
 };
 
 /**
@@ -40,6 +44,8 @@ export type StatuslineState = {
   /** True in a linked git worktree — the branch glyph becomes an amber ⎇+. */
   worktree?: boolean;
   model?: string;
+  /** Reasoning effort, printed after the model as `· high`. Omit to hide. */
+  effort?: string;
   ctx?: number;
   /** Raw context tokens. The segment prints them in thousands. Omit to hide. */
   ctxTokens?: number;

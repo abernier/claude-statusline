@@ -156,44 +156,93 @@ const context: Story = {
 };
 
 /**
- * 03 — the reset. Creeps up a few points over most of the loop, drops to zero
- * *instantly* (no ramp — that is the whole point of the shot), holds a beat,
- * then climbs back to where it started.
+ * 03 — the agent panel. Three subagents fill their own context windows at
+ * their own pace: one finishes early and holds, one climbs into red, one
+ * starts late. The batch finishes near the end and a new one starts, which is
+ * what makes the loop seamless.
+ *
+ * The arc is ported from the page (docs/index.html, story 03) — the ramps,
+ * peaks and the 0.94 turnover are the same numbers. Change one, change the
+ * other. The page's story also creeps the docked line's `ctx`; the render has
+ * no docked line, so only the rows are here.
  */
-const reset: Story = {
-  id: 'reset',
-  slug: 'loop-reset',
-  summary: 'slow creep, instant drop to zero, quick climb back',
-  // The reset is a race too — it is the same two racers, both sent back to zero.
-  // No effort row: nothing here turns on the dial.
-  race: {segment: 'five'},
+const AGENTS_DONE_AT = 0.94;
+
+const agents: Story = {
+  id: 'agents',
+  slug: 'loop-agents',
+  summary: 'three subagents, each filling its own context window',
   at: (p) => {
-    let pct: number;
-    let elapsed: number;
-    if (p < 0.8) {
-      const q = p / 0.8;
-      pct = 84 + 8 * q;
-      elapsed = 94 + 6 * q;
-    } else {
-      const q = (p - 0.8) / 0.2;
-      if (q < 0.14) {
-        // The drop, held just long enough to read as an event.
-        pct = 0;
-        elapsed = 0;
-      } else {
-        const r = (q - 0.14) / 0.86;
-        pct = 84 * r;
-        elapsed = 94 * r;
-      }
-    }
+    const done = p >= AGENTS_DONE_AT;
+    const ramp = (peak: number, from: number, to: number): number =>
+      done ? 0 : peak * Math.max(0, Math.min(1, (p - from) / (to - from)));
     return {
-      five: {pct, elapsed, resetsIn: remaining(elapsed, FIVE_WINDOW)},
+      agents: [
+        {
+          name: 'Explore',
+          model: 'Haiku 4.5',
+          effort: 'low',
+          desc: 'map the repo',
+          ctx: ramp(34, 0, 0.48),
+        },
+        {
+          name: 'verify:bugs',
+          model: 'Opus 5 1M',
+          effort: 'high',
+          desc: 'refute the findings',
+          ctx: ramp(76, 0.06, 0.9),
+        },
+        {
+          name: 'docs',
+          model: 'Sonnet 5',
+          effort: 'med',
+          desc: 'write the changelog',
+          ctx: ramp(22, 0.42, 0.9),
+        },
+      ],
     };
   },
 };
 
 /**
- * 04 — the Fable weekly quota, spent long before the week is over.
+ * 04 — the start of the line. A branch name types itself out until the folder
+ * and the branch run out of budget and the ladder starts eliding, then the
+ * folder changes too and the model and the effort change with it.
+ *
+ * Ported from the page (docs/index.html, story 04) — the cue points are the
+ * same numbers. Change one, change the other. The trimming itself is not in
+ * here: `fitLocation()` in segments.ts does it, the way the script does.
+ */
+const LONG_BRANCH = 'feature/context-window-bar-redesign';
+/** Where the typing stops, the effort drops, the project changes, and the loop seams. */
+const TYPED_AT = 0.46;
+const SWITCH_AT = 0.76;
+const START_SEAM_AT = 0.94;
+
+const lineStart: Story = {
+  id: 'line-start',
+  slug: 'loop-line-start',
+  summary: 'a branch name outgrowing its budget, and the model and effort changing',
+  at: (p) => {
+    const head = {dir: 'claude-statusline', branch: 'main', model: 'Opus 5 1M', effort: 'high'};
+    if (p >= START_SEAM_AT) return head;
+    if (p >= SWITCH_AT) {
+      return {
+        ...head,
+        dir: 'acme-platform-web-frontend',
+        branch: LONG_BRANCH,
+        model: 'Sonnet 5',
+        effort: 'med',
+      };
+    }
+    if (p >= TYPED_AT) return {...head, branch: LONG_BRANCH, effort: 'low'};
+    const typed = Math.round(4 + (LONG_BRANCH.length - 4) * (p / TYPED_AT));
+    return {...head, branch: LONG_BRANCH.slice(0, Math.max(4, typed))};
+  },
+};
+
+/**
+ * 05 — the Fable weekly quota, spent long before the week is over.
  *
  * Usage runs to 100% in the first half of the loop and then just sits there:
  * nothing gives the quota back except the weekly reset, so the only thing still
@@ -228,7 +277,7 @@ const fable: Story = {
   },
 };
 
-/** 05 — the line from `Ctx` rightward, every window alive at once. */
+/** 06 — the line from `Ctx` rightward, every window alive at once. */
 const wholeLine: Story = {
   id: 'whole-line',
   slug: 'loop-whole-line',
@@ -260,39 +309,8 @@ const wholeLine: Story = {
   },
 };
 
-/**
- * 06 — the agent panel. Three subagents fill their own context windows at
- * their own pace: one finishes early and holds, one climbs into red, one
- * starts late. The batch finishes near the end and a new one starts, which is
- * what makes the loop seamless.
- *
- * The arc is ported from the page (docs/index.html, story 06) — the ramps,
- * peaks and the 0.94 turnover are the same numbers. Change one, change the
- * other. The page's story also creeps the docked line's `ctx`; the render has
- * no docked line, so only the rows are here.
- */
-const AGENTS_DONE_AT = 0.94;
-
-const agents: Story = {
-  id: 'agents',
-  slug: 'loop-agents',
-  summary: 'three subagents, each filling its own context window',
-  at: (p) => {
-    const done = p >= AGENTS_DONE_AT;
-    const ramp = (peak: number, from: number, to: number): number =>
-      done ? 0 : peak * Math.max(0, Math.min(1, (p - from) / (to - from)));
-    return {
-      agents: [
-        {name: 'Explore', desc: 'map the repo', ctx: ramp(34, 0, 0.48)},
-        {name: 'verify:bugs', desc: 'refute the findings', ctx: ramp(76, 0.06, 0.9)},
-        {name: 'docs', desc: 'write the changelog', ctx: ramp(22, 0.42, 0.9)},
-      ],
-    };
-  },
-};
-
 /** Walkthrough order — the same order the page's sections run in. */
-export const STORIES: Story[] = [burn, context, reset, fable, wholeLine, agents];
+export const STORIES: Story[] = [burn, context, agents, lineStart, fable, wholeLine];
 
 export const storyById = (id: string): Story => {
   const story = STORIES.find((s) => s.id === id);

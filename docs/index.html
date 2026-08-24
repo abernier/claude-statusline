@@ -23,7 +23,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-statusline — a statusline for Claude Code</title>
-<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder, branch, model, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
+<meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder, branch, model and effort, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
 <link rel="canonical" href="https://alp82.github.io/claude-statusline/">
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -31,7 +31,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alp82.github.io/claude-statusline/">
 <meta property="og:title" content="claude-statusline — a statusline for Claude Code">
-<meta property="og:description" content="One bash script. Folder, branch, model, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
+<meta property="og:description" content="One bash script. Folder, branch, model and effort, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
 <meta property="og:image" content="https://alp82.github.io/claude-statusline/assets/social-preview.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
@@ -109,6 +109,9 @@ a { color:inherit; }
 .sl .br, .sl .label, .sl .reset, .sl .tok { color:var(--dim); }
 /* `★ Model` is printed green, not yellow — statusline.sh:147 */
 .sl .star { color:var(--green); }
+/* the effort level, dim, behind a separator-coloured dot */
+.sl .dot { color:var(--sep); }
+.sl .eff { color:var(--dim); }
 .sl .pct { min-width:2.6em; text-align:right; }
 .sl .reset { min-width:3.9em; }
 /* right-aligned like .pct, so the `k` holds one column as the count grows */
@@ -127,8 +130,11 @@ a { color:inherit; }
    line's own pieces: the plain bar and the pct/tok columns. */
 .agents { display:grid; row-gap:.85em; }
 .agents .arow { gap:.6em; }
-.agents .aname { color:var(--dirc); min-width:7em; }
+/* the name column's width is measured from the rows, not fixed here */
+.agents .aname { color:var(--dirc); }
 .agents .adesc { color:var(--dim); }
+/* min-width has no effect on an inline box, and these hold the padded columns */
+.agents .acol { display:inline-block; }
 .agents .adesc .dot { color:var(--sep); padding-right:.5em; }
 
 /* ================= the Claude Code TUI ================= */
@@ -425,10 +431,10 @@ noscript img { display:block; width:100%; height:auto; }
     <nav class="stepnav">
       <a href="#s0" data-step="0"><i>01</i>Usage against time</a>
       <a href="#s1" data-step="1"><i>02</i>Context window</a>
-      <a href="#s2" data-step="2"><i>03</i>When a window resets</a>
-      <a href="#s3" data-step="3"><i>04</i>The Fable window</a>
-      <a href="#s4" data-step="4"><i>05</i>What is on the line</a>
-      <a href="#s5" data-step="5"><i>06</i>The agent panel</a>
+      <a href="#s2" data-step="2"><i>03</i>The agent panel</a>
+      <a href="#s3" data-step="3"><i>04</i>The start of the line</a>
+      <a href="#s4" data-step="4"><i>05</i>The Fable window</a>
+      <a href="#s5" data-step="5"><i>06</i>What is on the line</a>
     </nav>
     <div class="grp">Reference</div>
     <nav>
@@ -455,9 +461,9 @@ noscript img { display:block; width:100%; height:auto; }
 
         <header class="hero" id="start">
           <h1>A statusline for Claude Code.</h1>
-          <p class="sub">One bash script. It shows your folder, branch and model, how full the
-            context window is, and your 5-hour, 7-day and Fable limits as bars under the
-            prompt.</p>
+          <p class="sub">One bash script. It shows your folder, branch, model, and effort,
+            how full the context window is, and your 5-hour, 7-day, and Fable limits as bars
+            under the prompt.</p>
           <!-- The prompt in full, as the thing you click. The visible <pre> and the
                button's data-copy are the same four lines twice over — they must
                stay in step, and they must match install step 01 further down. -->
@@ -488,11 +494,9 @@ noscript img { display:block; width:100%; height:auto; }
           <h2>Usage against time</h2>
           <div class="cols">
             <div>
-              <p>The top half of each bar shows usage. The bottom half shows elapsed time. If
-                usage is ahead of time, you run out before the reset, so drop an effort level.
-                If usage is behind, you can raise it.</p>
-              <p>The row under the bar records the effort level for each tenth of the window.
-                In this loop, effort is high until usage passes the clock, then low.</p>
+              <p>The top half of the bar shows usage. The bottom half shows elapsed time.
+                When the bar turns red, lower the effort level.</p>
+              <p>The row under the bar shows the effort level for each tenth of the window.</p>
             </div>
             <div class="legend">
               <span class="t">bar color · usage vs time</span>
@@ -513,78 +517,65 @@ noscript img { display:block; width:100%; height:auto; }
               alt="The 5h bar with both racers named and the gap between them read out: usage climbs past the blue elapsed-time half at high effort and turns red, then flattens once the effort drops. The clock overtakes it and the bar turns yellow, then green."></noscript>
           </div>
         </section>
-
         <section class="step" id="s1" data-i="1" data-hue="#c0564e"
                  data-cap="# context filling up" style="--stepc:#c0564e">
           <div class="n">02</div>
           <h2>Context window</h2>
-          <p>The bar turns yellow at 25% and red at 50%. The thresholds are lower than on the
-            limit bars, because a full context window stops you at once. The bar fills in eighths
-            of a character, so it moves before the number changes.</p>
+          <p>The bar turns yellow at 25% and red at 50%. Start a new session at yellow.
+            Answers get worse as the window fills.</p>
           <div class="crop">
             <div class="slh" data-crop="1" aria-hidden="true"></div>
             <noscript><img src="assets/loop-context.gif" width="1000" height="200"
               alt="The Ctx bar filling to 78%, turning yellow then red, then compacting back down to the summary."></noscript>
           </div>
         </section>
-
-        <section class="step" id="s2" data-i="2" data-hue="#6ea85c"
-                 data-cap="# window reset" style="--stepc:#6ea85c">
+        <section class="step" id="s2" data-i="2" data-hue="#4ea895"
+                 data-cap="# each agent burns its own window" style="--stepc:#4ea895">
           <div class="n">03</div>
-          <h2>When a window resets</h2>
-          <p>When a 5-hour window ends, both halves drop to zero and the countdown restarts at
-            5h0m. The top half stays green here, because usage trails the clock the whole
-            time.</p>
-          <div class="crop annotated">
+          <h2>The agent panel</h2>
+          <p>Each subagent shows its own context bar, model, and effort.</p>
+          <!-- wide like the whole-line crop: a row with a model and an effort
+               is wider than the 860px measure -->
+          <div class="crop wide">
             <div class="slh" data-crop="2" aria-hidden="true"></div>
-            <noscript><img src="assets/loop-reset.gif" width="1000" height="306"
-              alt="The 5h bar with the gap read out, creeping up, dropping to zero the instant the window resets, then climbing back."></noscript>
+            <noscript><img src="assets/loop-agents.gif" width="1680" height="330"
+              alt="Three agent rows, each with its own context bar, model and effort: one holds at 34%, one climbs into red, one starts late and stays green."></noscript>
+          </div>
+        </section>
+        <section class="step" id="s3" data-i="3" data-hue="#6ea85c"
+                 data-cap="# folder, branch, model, effort" style="--stepc:#6ea85c">
+          <div class="n">04</div>
+          <h2>The start of the line</h2>
+          <p>Long folder and branch names are cut to fit.</p>
+          <div class="crop">
+            <div class="slh" data-crop="3" aria-hidden="true"></div>
+            <noscript><img src="assets/loop-line-start.gif" width="1500" height="200"
+              alt="The start of the statusline: a branch name grows until it no longer fits and is cut with an ellipsis, then the folder is cut too and the model and effort change."></noscript>
           </div>
         </section>
 
-        <section class="step" id="s3" data-i="3" data-hue="#8f79c0"
+        <section class="step" id="s4" data-i="4" data-hue="#8f79c0"
                  data-cap="# Fable's own weekly window" style="--stepc:#8f79c0">
-          <div class="n">04</div>
+          <div class="n">05</div>
           <h2>The Fable window</h2>
-          <p>Fable has its own weekly quota. It refills only at the weekly reset, so the blue
-            half tells you how long the wait is. It resets with the 7-day window, so it shows no
-            ↻ of its own.</p>
-          <p>Claude Code does not send this value. The script reads it from ~/.claude.json and
-            refreshes it from the API in the background, at most every ten minutes.</p>
+          <p>Fable has its own weekly quota. The limit is usually lower than for other
+            models.</p>
           <div class="crop annotated">
-            <div class="slh" data-crop="3" aria-hidden="true"></div>
+            <div class="slh" data-crop="4" aria-hidden="true"></div>
             <noscript><img src="assets/loop-fable.gif" width="1000" height="306"
               alt="The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset."></noscript>
           </div>
         </section>
-
-        <section class="step" id="s4" data-i="4" data-hue="#5891bd"
+        <section class="step" id="s5" data-i="5" data-hue="#5891bd"
                  data-cap="# context, 5h, 7d, Fable" style="--stepc:#5891bd">
-          <div class="n">05</div>
+          <div class="n">06</div>
           <h2>What is on the line</h2>
-          <p>The context window, then the 5-hour, 7-day and Fable windows. Each one is a label, a
-            bar and a number. Your folder, branch and model sit at the start of the line.</p>
+          <p>The statusline shows the context window, the 5-hour limit, and the 7-day and
+            Fable windows.</p>
           <div class="crop wide">
-            <div class="slh" data-crop="4" aria-hidden="true"></div>
+            <div class="slh" data-crop="5" aria-hidden="true"></div>
             <noscript><img src="assets/loop-whole-line.gif" width="2240" height="180"
               alt="The whole statusline from Ctx rightward, every window moving at once."></noscript>
-          </div>
-        </section>
-
-        <section class="step" id="s5" data-i="5" data-hue="#4ea895"
-                 data-cap="# each agent burns its own window" style="--stepc:#4ea895">
-          <div class="n">06</div>
-          <h2>The agent panel</h2>
-          <p>When subagents run, Claude Code lists them below the prompt. A second script,
-            subagent-statusline.sh, gives each row its own context bar, with the same
-            thresholds as Ctx. A red row returns a thin answer, and the bar tells you before
-            the answer arrives.</p>
-          <p>The main line barely moves while they work: each agent burns its own window,
-            and your context stays clean.</p>
-          <div class="crop">
-            <div class="slh" data-crop="5" aria-hidden="true"></div>
-            <noscript><img src="assets/loop-agents.gif" width="1240" height="330"
-              alt="Three agent rows, each with its own context bar: one holds at 34%, one climbs into red, one starts late and stays green."></noscript>
           </div>
         </section>
 
@@ -795,25 +786,54 @@ function stackedBar(usage, elapsed, color, glow) {
    Fable window resets with the 7-day one, so `weekT` is the blue half of both
    bars and the two can never drift apart. */
 const DEFAULTS = {ctx:19, five:12, fiveT:22, week:16, weekT:51, fable:7,
-                  glow:false, only:null, focus:null, compact:false};
+                  dir:'claude-statusline', branch:'main', model:'Opus 5 1M', effort:'high',
+                  glow:false, only:null, focus:null, compact:false, head:false};
+
+/* ================= the location ladder =================
+   statusline.sh's own steps, in the same order. While both fit, neither is
+   shortened. When they do not fit, the branch loses its namespace first, then
+   its tail, then the project is cut. The script counts terminal columns and
+   this counts characters, which agree for the ASCII names used here. */
+const LOC_MAX = 34, LOC_GLUE = 3, BRANCH_FLOOR = 12, PROJECT_FLOOR = 10;
+/* cut at the word boundary nearest the limit, unless that throws away more
+   than three columns */
+const wordTrim = (str, n) => {
+  if (str.length <= n) return str;
+  const cut = str.slice(0, n - 1);
+  const at = Math.max(cut.lastIndexOf('-'), cut.lastIndexOf('_'),
+                      cut.lastIndexOf('.'), cut.lastIndexOf('/'));
+  return (at >= 4 && at >= cut.length - 3 ? cut.slice(0, at) : cut) + '…';
+};
+function fitLocation(project, branch) {
+  const glue = branch ? LOC_GLUE : 0;
+  if (project.length + branch.length + glue <= LOC_MAX) return [project, branch];
+  if (branch.includes('/')) branch = branch[0] + '/' + branch.split('/').pop();
+  const room = LOC_MAX - project.length - glue;
+  if (room >= branch.length || room >= BRANCH_FLOOR) return [project, wordTrim(branch, room)];
+  const bw = Math.min(branch.length, BRANCH_FLOOR);
+  return [wordTrim(project, Math.max(LOC_MAX - glue - bw, PROJECT_FLOOR)), wordTrim(branch, bw)];
+}
 
 /* `compact` drops dir/branch/model — the line from Ctx rightward;
-   `only` crops to a single segment. */
+   `head` keeps only those two, the start of the line; `only` crops to a
+   single segment. */
 function statusline(o = {}) {
   const s = {...DEFAULTS, ...o};
   /* the script is handed percentages already rounded (jq `| round`), and uses
      the same integer for the bar and the number — so they can never disagree */
   const R = Math.round;
   const ctx = R(s.ctx), five = R(s.five), week = R(s.week), fable = R(s.fable);
-  const skip = id => (s.only && s.only !== id) || (s.compact && (id === 'dir' || id === 'model'));
+  const isHead = id => id === 'dir' || id === 'model';
+  const skip = id => (s.only && s.only !== id)
+    || (s.compact && isHead(id)) || (s.head && !isHead(id));
   const seg = (id, inner) => skip(id) ? null
     : `<span class="seg${s.focus && s.focus !== id ? ' off' : ''}">${inner}</span>`;
   const pct = (v, c) => `<span class="pct" style="color:${c}">${v}%</span>`;
   const reset = t => `<span class="reset">${t}</span>`;
   const tok = v => `<span class="tok">${fmtTokens(v)}</span>`;
   const parts = [
-    seg('dir',   `<span class="dir">claude-statusline</span><span class="br">⎇ main</span>`),
-    seg('model', `<span class="star">★</span><span>Opus 5</span>`),
+    seg('dir',   (([d, b]) => `<span class="dir">${d}</span><span class="br">⎇ ${b}</span>`)(fitLocation(s.dir, s.branch))),
+    seg('model', `<span class="star">★</span><span>${s.model}</span><span class="dot">·</span><span class="eff">${s.effort === 'low' ? 'low' : s.effort ?? 'high'}</span>`),
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, paceColor(five, s.fiveT), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
     seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, paceColor(week, s.weekT))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
@@ -822,18 +842,25 @@ function statusline(o = {}) {
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to
      stay a zoom of the docked line rather than a shrunk copy of it. */
-  const k = s.k ?? (s.only ? 5.4 : s.compact ? 1.0 : 1.15);
-  const cap = s.cap ?? (s.only ? 44 : s.compact ? 15 : 21);
+  const k = s.k ?? (s.only ? 5.4 : s.head ? 2.5 : s.compact ? 1.0 : 1.15);
+  const cap = s.cap ?? (s.only ? 44 : s.head ? 30 : s.compact ? 15 : 21);
   return `<div class="sl" style="font-size:clamp(9px,${k}cqi,${cap}px)">${parts.join('<span class="pipe">│</span>')}</div>`;
 }
 
 /* the agent panel, as subagent-statusline.sh draws it: one row per agent,
-   name · its own context bar · pct · tokens · description */
+   name · its own context bar · pct · tokens · model · effort · description.
+   The script measures each column across the whole payload and pads every row
+   to it; here the same widths come out of the story data and are spent as a
+   min-width, so the description starts in one column down the panel. */
 function agentPanel(o = {}) {
-  const rows = (o.agents ?? []).map(a => {
+  const agents = o.agents ?? [];
+  /* .6em is the mono advance width, so a column of n glyphs is n × .6em */
+  const col = key => `min-width:${0.6 * Math.max(0, ...agents.map(a => (a[key] ?? '').length))}em`;
+  const name = col('name'), model = col('model'), effort = col('effort');
+  const rows = agents.map(a => {
     const v = Math.round(a.ctx), c = ctxColor(v);
     return `<div class="sl arow">
-      <span class="aname">${a.name}</span>${plainBar(v, c)}<span class="pct" style="color:${c}">${v}%</span><span class="tok">${fmtTokens(v)}</span><span class="adesc"><span class="dot">·</span>${a.desc}</span>
+      <span class="aname" style="${name}">${a.name}</span>${plainBar(v, c)}<span class="pct" style="color:${c}">${v}%</span><span class="tok">${fmtTokens(v)}</span><span class="adesc"><span class="dot">·</span><span class="acol" style="${model}">${a.model}</span></span><span class="adesc"><span class="dot">·</span><span class="acol" style="${effort}">${a.effort}</span></span><span class="adesc"><span class="dot">·</span>${a.desc}</span>
     </div>`;
   });
   return `<div class="agents" style="font-size:clamp(9px,2.9cqi,24px)">${rows.join('')}</div>`;
@@ -886,36 +913,7 @@ const STORIES = [
   },
   /* 02 — the context window fills, then compacts back to the summary */
   p => ({ctx: CTX_FLOOR + cyc(p, 78 - CTX_FLOOR, 0.92, easeOut)}),
-  /* 03 — creep, then an instant drop to zero, held a beat, then the climb back */
-  p => {
-    let pct, elapsed;
-    if (p < 0.8) { const q = p / 0.8; pct = 84 + 8 * q; elapsed = 94 + 6 * q; }
-    else {
-      const q = (p - 0.8) / 0.2;
-      if (q < 0.14) { pct = 0; elapsed = 0; }
-      else { const r = (q - 0.14) / 0.86; pct = 84 * r; elapsed = 94 * r; }
-    }
-    return {five: pct, fiveT: elapsed};
-  },
-  /* 04 — the Fable quota is spent long before the week is over, and only the
-     weekly reset gives it back. The blue clock runs the whole way to the end of
-     the window, then everything on that clock — Fable and 7d alike — drops to
-     zero, which is where the loop starts. */
-  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
-         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
-         week: 68 * (p / FABLE_RESET_AT),
-         weekT: 100 * (p / FABLE_RESET_AT)},
-  /* 05 — the whole line, every window alive at once. One wall clock drives every
-     blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
-     window and 2.1 points of a 7-day one. */
-  p => {
-    const fiveT = cyc(p, 72, 0.95);
-    return {ctx: CTX_FLOOR + cyc(p, 52, 0.95),
-            five: cyc(p, 64, 0.95, easeIn), fiveT,
-            week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED + fiveT * FIVE_WINDOW / WEEK_WINDOW,
-            fable: 7 + cyc(p, 26, 0.95)};
-  },
-  /* 06 — three subagents fill their own windows at their own pace while the
+  /* 03 — three subagents fill their own windows at their own pace while the
      main line's Ctx barely moves; the batch finishes and a new one starts,
      which is what makes it loop. Ported to stories.ts as `agents` — the ramps,
      peaks and the 0.94 turnover are the same numbers. Change one, change the
@@ -927,18 +925,53 @@ const STORIES = [
     return {
       ctx: 12 + (done ? 0 : 4 * (p / 0.94)),
       agents: [
-        {name: 'Explore',     desc: 'map the repo',         ctx: ramp(34, 0.00, 0.48)},
-        {name: 'verify:bugs', desc: 'refute the findings',  ctx: ramp(76, 0.06, 0.90)},
-        {name: 'docs',        desc: 'write the changelog',  ctx: ramp(22, 0.42, 0.90)},
+        {name: 'Explore',     model: 'Haiku 4.5', effort: 'low',
+         desc: 'map the repo',        ctx: ramp(34, 0.00, 0.48)},
+        {name: 'verify:bugs', model: 'Opus 5 1M', effort: 'high',
+         desc: 'refute the findings', ctx: ramp(76, 0.06, 0.90)},
+        {name: 'docs',        model: 'Sonnet 5',  effort: 'med',
+         desc: 'write the changelog', ctx: ramp(22, 0.42, 0.90)},
       ],
     };
+  },
+  /* 04 — the start of the line. A branch name types itself out until the pair
+     runs out of budget and the ladder starts eliding; then the project changes
+     too, and the model and effort change with it. Ported to stories.ts as
+     `lineStart` — the cue points are the same numbers. Change one, change the
+     other. */
+  p => {
+    const BRANCH = 'feature/context-window-bar-redesign';
+    const typed = n => BRANCH.slice(0, Math.max(4, Math.round(n)));
+    if (p >= 0.94) return {dir: 'claude-statusline', branch: 'main'};   // the seam
+    if (p >= 0.76) return {dir: 'acme-platform-web-frontend', branch: BRANCH,
+                           model: 'Sonnet 5', effort: 'med'};
+    if (p >= 0.46) return {dir: 'claude-statusline', branch: BRANCH, effort: 'low'};
+    return {dir: 'claude-statusline', branch: typed(4 + (BRANCH.length - 4) * (p / 0.46))};
+  },
+  /* 05 — the Fable quota is spent long before the week is over, and only the
+     weekly reset gives it back. The blue clock runs the whole way to the end of
+     the window, then everything on that clock — Fable and 7d alike — drops to
+     zero, which is where the loop starts. */
+  p => p >= FABLE_RESET_AT ? {fable: 0, week: 0, weekT: 0} : {
+         fable: 100 * easeOut(Math.min(1, p / FABLE_SPENT_AT)),
+         week: 68 * (p / FABLE_RESET_AT),
+         weekT: 100 * (p / FABLE_RESET_AT)},
+  /* 06 — the whole line, every window alive at once. One wall clock drives every
+     blue half: the loop is a time-lapse of 3.6 hours, which is 72% of a 5-hour
+     window and 2.1 points of a 7-day one. */
+  p => {
+    const fiveT = cyc(p, 72, 0.95);
+    return {ctx: CTX_FLOOR + cyc(p, 52, 0.95),
+            five: cyc(p, 64, 0.95, easeIn), fiveT,
+            week: 12 + cyc(p, 10, 0.95), weekT: WEEK_ELAPSED + fiveT * FIVE_WINDOW / WEEK_WINDOW,
+            fable: 7 + cyc(p, 26, 0.95)};
   },
 ];
 
 /* what each crop frames, and which segment the docked line keeps lit */
-const CROPS = [{only:'five'}, {only:'ctx'}, {only:'five'}, {only:'fable'},
-               {compact:true, k:1.35, cap:18}, {panel:true}];
-const FOCUS = ['five', 'ctx', 'five', 'fable', null, 'ctx'];
+const CROPS = [{only:'five'}, {only:'ctx'}, {panel:true}, {head:true}, {only:'fable'},
+               {compact:true, k:1.35, cap:18}];
+const FOCUS = ['five', 'ctx', 'ctx', null, 'fable', null];
 
 /* ================= behaviour ================= */
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
