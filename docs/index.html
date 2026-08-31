@@ -136,6 +136,11 @@ a { color:inherit; }
 .bar .cell .top, .bar .cell .bot { height:50%; }
 .bar .cell .bot { position:relative; z-index:1; }   /* blue paints over the glow */
 .bar.plain { position:relative; }
+/* vert_meter() in statusline.sh — the stacked bar folded into two columns:
+   usage height (pace-coloured) beside window-time height (blue), in eighths */
+.vmeter { display:flex; align-items:flex-end; height:1.45em; width:1.2em;
+  background:var(--track); flex:0 0 auto; }
+.vmeter i { display:block; width:.6em; }
 .bar.plain .fill { position:absolute; left:0; top:0; bottom:0; }
 .overshoot { box-shadow:0 0 .16em currentColor; }
 
@@ -560,11 +565,12 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="n">04</div>
           <h2>The Fable window</h2>
           <p>Fable has its own weekly quota. The limit is usually lower than for other
-            models.</p>
-          <div class="crop annotated">
+            models, so it gets a glance instead of a track: two columns, your usage
+            beside the week&#8217;s clock, and the exact number in the percentage.</p>
+          <div class="crop">
             <div class="slh" data-crop="3" aria-hidden="true"></div>
-            <noscript><img src="assets/loop-fable.gif" width="1000" height="306"
-              alt="The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset."></noscript>
+            <noscript><img src="assets/loop-fable.gif" width="1000" height="200"
+              alt="The Fable meter: two columns, the red usage height at full while the blue week-elapsed column climbs to the reset, then both drop to the floor."></noscript>
           </div>
         </section>
 
@@ -798,6 +804,14 @@ function stackedBar(usage, elapsed, color, glow) {
   }
   return `<span class="bar">${cells}</span>`;
 }
+/* vglyph()/vert_meter() — a percentage as a block-glyph height, in eighths,
+   with 1/8 as the floor so 0% still shows a base. Not a `.bar`, so the
+   annotation machinery leaves it alone: a two-cell meter holds no race track. */
+const vLevel = p => Math.max(1, Math.floor((Math.max(0, Math.min(100, p)) * 8 + 50) / 100));
+function vertMeter(usage, elapsed, color) {
+  const col = (lvl, bg) => `<i style="height:${lvl * 12.5}%;background:${bg}"></i>`;
+  return `<span class="vmeter">${col(vLevel(usage), color)}${col(vLevel(elapsed), 'var(--blue)')}</span>`;
+}
 
 /* The idle line, for whatever a story leaves alone. There is no `fableT`: the
    Fable window resets with the 7-day one, so `weekT` is the blue half of both
@@ -868,7 +882,7 @@ function statusline(o = {}) {
     seg('ctx',   `<span class="label">Ctx</span>${plainBar(ctx, ctxColor(ctx))}${pct(ctx, ctxColor(ctx))}${tok(ctx)}`),
     seg('five',  `<span class="label">5h</span>${stackedBar(five, s.fiveT, paceColor(five, s.fiveT), s.glow)}${pct(five, pctColor(five))}${reset(fmtReset(remaining(s.fiveT, FIVE_WINDOW)))}`),
     seg('week',  `<span class="label">7d</span>${stackedBar(week, s.weekT, paceColor(week, s.weekT))}${pct(week, pctColor(week))}${reset(fmtReset(remaining(s.weekT, WEEK_WINDOW)))}`),
-    seg('fable', `<span class="label">Fable</span>${stackedBar(fable, s.weekT, paceColor(fable, s.weekT))}${pct(fable, pctColor(fable))}`),
+    seg('fable', `<span class="label">Fable</span>${vertMeter(fable, s.weekT, paceColor(fable, s.weekT))}${pct(fable, pctColor(fable))}`),
   ].filter(Boolean);
   /* the line is sized off its container, so one crop can hold one huge segment
      and the docked line can hold four small ones. A crop can override both to

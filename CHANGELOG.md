@@ -4,6 +4,21 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-08-31
+
+### Changed
+
+- **The Fable meter is two columns instead of a bar.** The 10-cell stacked bar
+  gave way to a vertical meter: two block-glyph heights (`▁▂▃▄▅▆▇█`, in
+  eighths), usage first, pace-colored like the stacked bar's top row, beside
+  the window-time height in blue, both on the dark track. The Fable window is
+  secondary, so it gets a glance instead of a track — and the second row gets
+  eight cells back. The colored percentage still carries the exact number.
+  Mirrored in `docs/index.html` and `remotion/`; a two-cell meter holds no
+  race, so story 04 lost its annotation and its crop shrank to the plain
+  height. `loop-fable` and `loop-whole-line` re-rendered; the landing page and
+  README prose follow the meter.
+
 ## 2026-08-24
 
 ### Added

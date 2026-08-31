@@ -1,6 +1,6 @@
 import React from 'react';
 import {cellWidth as cellWidthFor, colors, fontFamily, lineHeight, metrics} from '../theme';
-import {Bar, StackedBar} from './Bar';
+import {Bar, StackedBar, VertMeter} from './Bar';
 import {buildSegments, layout, partCells, SEPARATOR_CELLS} from './segments';
 import type {Part, SegmentId, StatuslineState} from './types';
 
@@ -57,6 +57,17 @@ const PartView: React.FC<{
       <Bar
         pct={part.pct}
         width={part.width}
+        color={part.color}
+        cellWidth={cellWidth}
+        cellHeight={cellHeight}
+      />
+    );
+  }
+  if (part.kind === 'vmeter') {
+    return (
+      <VertMeter
+        usage={part.usage}
+        elapsed={part.elapsed}
         color={part.color}
         cellWidth={cellWidth}
         cellHeight={cellHeight}

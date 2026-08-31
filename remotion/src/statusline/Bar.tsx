@@ -130,3 +130,54 @@ export const StackedBar: React.FC<StackedBarProps> = ({
     </div>
   );
 };
+
+type VertMeterProps = {
+  usage: number;
+  elapsed: number;
+  color: string;
+  cellWidth: number;
+  cellHeight: number;
+};
+
+/** 1–8, the ▁▂▃▄▅▆▇█ ladder — vglyph() in statusline.sh, ▁ as the floor. */
+const vLevel = (pct: number): number =>
+  Math.max(1, Math.floor((Math.min(100, Math.max(0, pct)) * 8 + 50) / 100));
+
+/**
+ * The vertical meter: the stacked bar folded into two columns — usage height
+ * (pace-coloured) beside window-time height (blue), both on the dark track,
+ * quantised to eighths of a cell the way the block glyphs force.
+ */
+export const VertMeter: React.FC<VertMeterProps> = ({
+  usage,
+  elapsed,
+  color,
+  cellWidth,
+  cellHeight,
+}) => {
+  const column = (level: number, background: string, left: number) => (
+    <div
+      style={{
+        position: 'absolute',
+        left,
+        bottom: 0,
+        width: cellWidth,
+        height: (level / 8) * cellHeight,
+        backgroundColor: background,
+      }}
+    />
+  );
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: 2 * cellWidth,
+        height: cellHeight,
+        backgroundColor: colors.track,
+      }}
+    >
+      {column(vLevel(usage), color, 0)}
+      {column(vLevel(elapsed), colors.blue, cellWidth)}
+    </div>
+  );
+};

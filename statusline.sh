@@ -459,6 +459,22 @@ if (( ctx_pct >= 0 )); then
   row2+=("$seg")
 fi
 
+
+# vglyph <pct> — one block glyph whose height is the percentage, in eighths.
+# ▁ is the floor so 0% still shows a base.
+vglyph() {
+  local pct=$1 g=("▁" "▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+  (( pct < 0 )) && pct=0; (( pct > 100 )) && pct=100
+  printf '%s' "${g[$(( (pct * 8 + 50) / 100 ))]}"
+}
+
+# vert_meter <used_pct> <time_pct> — the stacked bar folded into two columns:
+# usage glyph (pace-colored, like stacked_bar) beside a blue time glyph, both
+# on the dark track.
+vert_meter() {
+  printf '\033[%s;%sm%s\033[38;2;80;130;220;%sm%s\033[0m' \
+    "$(pace_color "$1" "$2")" "$TRACK" "$(vglyph "$1")" "$TRACK" "$(vglyph "$2")"
+}
 # elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
 elapsed_pct() {
   local remaining=$(( $1 - $(date +%s) ))
@@ -491,10 +507,12 @@ fi
 
 if (( fable_pct >= 0 )); then
   seg="${DIM}Fable${RESET} "
+  # Two-column vertical meter instead of a 10-cell bar: the Fable window is
+  # secondary, so it gets a compact glance — heights for usage and time.
   if (( fable_reset > 0 )); then
-    seg+="$(stacked_bar "$fable_pct" "$(elapsed_pct "$fable_reset" 604800)" 10)"
+    seg+="$(vert_meter "$fable_pct" "$(elapsed_pct "$fable_reset" 604800)")"
   else
-    seg+="$(bar "$fable_pct" 10)"
+    seg+="$(printf '\033[%s;%sm%s\033[0m' "$(pct_color "$fable_pct")" "$TRACK" "$(vglyph "$fable_pct")")"
   fi
   # No ↻ countdown here: the Fable window resets with the 7-day one, so the
   # segment before it already shows this exact time.

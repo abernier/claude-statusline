@@ -4,7 +4,9 @@ export type Part =
   /** `bold` is the weight the git counts carry — their labels stay regular. */
   | {kind: 'text'; text: string; color: string; bold?: boolean}
   | {kind: 'bar'; pct: number; width: number; color: string}
-  | {kind: 'stacked'; usage: number; elapsed: number; width: number; color: string};
+  | {kind: 'stacked'; usage: number; elapsed: number; width: number; color: string}
+  /** The stacked bar folded into two columns of block-glyph heights. */
+  | {kind: 'vmeter'; usage: number; elapsed: number; width: number; color: string};
 
 export type Segment = {
   id: SegmentId;

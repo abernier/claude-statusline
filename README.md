@@ -233,10 +233,12 @@ Requires Claude Code v2.1.205 or later.
 
 ### The Fable window
 
-![The Fable bar with the gap read out, at 100% and red, holding while the blue week-elapsed half runs to the reset.](docs/assets/loop-fable.gif)
+![The Fable meter: two columns, the red usage height at full while the blue week-elapsed column climbs to the reset, then both drop to the floor.](docs/assets/loop-fable.gif)
 
 Fable has its own weekly quota. The limit is usually lower than for other
-models. Fable resets with the 7-day window, so it shows no `↻` of its own.
+models, so it gets a glance instead of a track: two columns, your usage beside
+the week's clock, and the exact number in the percentage. Fable resets with
+the 7-day window, so it shows no `↻` of its own.
 
 Claude Code does not send this value. The script reads it from `~/.claude.json`
 and refreshes it from the API in the background, at most every ten minutes.

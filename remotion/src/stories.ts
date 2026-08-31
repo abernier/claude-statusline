@@ -292,7 +292,7 @@ const fable: Story = {
   id: 'fable',
   slug: 'loop-fable',
   summary: 'Fable quota spent early, then waiting out the week for the reset',
-  race: {segment: 'fable'},
+  // No race: the two-column vertical meter holds no track to annotate.
   at: (p) => {
     const elapsed = fableWeekElapsed(p);
     const pct =

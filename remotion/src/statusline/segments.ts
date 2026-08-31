@@ -73,15 +73,26 @@ const limitSegment = (
     {kind: 'text', text: `${label} `, color: colors.dim},
     window.elapsed === undefined
       ? {kind: 'bar', pct, width: BAR_CELLS, color}
-      : {
-          kind: 'stacked',
-          usage: pct,
-          elapsed: window.elapsed,
-          width: BAR_CELLS,
-          // The bar's top row reads pace against the blue row; the % text
-          // keeps the absolute thresholds.
-          color: paceColor(pct, window.elapsed),
-        },
+      : id === 'fable'
+        ? {
+            // The Fable window is secondary, so it gets the two-column
+            // vertical meter instead of a 10-cell bar — statusline.sh's
+            // vert_meter(). barColumns skips it: two cells hold no race.
+            kind: 'vmeter',
+            usage: pct,
+            elapsed: window.elapsed,
+            width: 2,
+            color: paceColor(pct, window.elapsed),
+          }
+        : {
+            kind: 'stacked',
+            usage: pct,
+            elapsed: window.elapsed,
+            width: BAR_CELLS,
+            // The bar's top row reads pace against the blue row; the % text
+            // keeps the absolute thresholds.
+            color: paceColor(pct, window.elapsed),
+          },
     {kind: 'text', text: ` ${pctField(pct)}`, color},
   ];
   if (showReset && window.resetsIn !== undefined) {
