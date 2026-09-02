@@ -8,6 +8,17 @@
 # Palette, thresholds, bar geometry and effort labels mirror statusline.sh —
 # change one, change the other.
 
+# --- settings. The same ~/.statuslinerc as statusline.sh, sourced the same
+# way: plain shell, and what the environment already carries wins over it.
+STATUSLINE_RC=${STATUSLINE_RC:-$HOME/.statuslinerc}
+if [[ -r $STATUSLINE_RC ]]; then
+  rc_env=$(export -p)
+  # shellcheck source=/dev/null
+  source "$STATUSLINE_RC"
+  eval "$rc_env" 2>/dev/null
+  unset rc_env
+fi
+
 input=$(cat)
 columns=$(jq -r '.columns // 80' <<<"$input")
 # A non-integer would be fatal, not ignored: bash aborts the script when an
@@ -40,6 +51,36 @@ bar() {
   out+="${partials[$part]}"
   local used=$(( full + (part > 0 ? 1 : 0) ))
   printf '\033[%s;%sm%s%*s\033[0m' "$TRACK" "$fg" "$out" $(( w - used )) ""
+}
+
+# vglyph <pct> — one block glyph whose height is the percentage, in eighths
+# (same as statusline.sh). ▁ is the floor so 0% still shows a base.
+vglyph() {
+  local pct=$1 g=("▁" "▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+  (( pct < 0 )) && pct=0; (( pct > 100 )) && pct=100
+  printf '%s' "${g[$(( (pct * 8 + 50) / 100 ))]}"
+}
+
+# GAUGE_CTX — the same setting statusline.sh reads, falling back to GAUGE:
+# `bar`, `meter` for a single block glyph, or `none` for no gauge at all. The
+# width it implies is a column of the grid, so it is measured once here and
+# every row is drawn to it, gauge or not. GAUGE_CELLS counts the space after
+# the gauge, and is zero when there is no gauge to separate from.
+GAUGE_CTX=${GAUGE_CTX:-${GAUGE:-bar}}
+case $GAUGE_CTX in
+  meter) CTX_CELLS=1 ;;
+  none)  CTX_CELLS=0 ;;
+  *)     CTX_CELLS=10 ;;
+esac
+GAUGE_CELLS=$(( CTX_CELLS > 0 ? CTX_CELLS + 1 : 0 ))
+
+# ctx_gauge <pct> — the context gauge and the space after it, or nothing
+ctx_gauge() {
+  case $GAUGE_CTX in
+    none)  ;;
+    meter) printf '\033[%s;%sm%s\033[0m ' "$(ctx_color "$1")" "$TRACK" "$(vglyph "$1")" ;;
+    *)     printf '%s ' "$(bar "$1" "$CTX_CELLS")" ;;
+  esac
 }
 
 # --- display width. A terminal counts columns; bash counts characters. CJK
@@ -213,7 +254,7 @@ done < <(jq -r '(.tasks // [])[] |
 
 # Name, bar, percentage and tokens are fixed-width, so the columns after them
 # start in the same place on every row.
-METER_CELLS=$(( 10 + 1 + PCT_CELLS + 1 + TOKENS_CELLS ))
+METER_CELLS=$(( GAUGE_CELLS + PCT_CELLS + 1 + TOKENS_CELLS ))
 row_start=$(( namew + 1 + METER_CELLS ))
 
 # A column is dropped for every row or for none: dropping it per row would
@@ -229,10 +270,10 @@ show_mdl=$(( mdlw > 0 )) show_eff=$(( effw > 0 ))
 for i in "${!ids[@]}"; do
   pct=${pcts[i]} tok_str=${toks[i]}
   if (( pct >= 0 )); then
-    meter="$(bar "$pct" 10) "$'\033['"$(ctx_color "$pct")m$(printf '%*s' "$PCT_CELLS" "${pct}%")${RESET}"
+    meter="$(ctx_gauge "$pct")"$'\033['"$(ctx_color "$pct")m$(printf '%*s' "$PCT_CELLS" "${pct}%")${RESET}"
   else
     # no window size, so no bar and no percentage — the tokens still line up
-    meter=$(printf '%*s' $(( 10 + 1 + PCT_CELLS )) '')
+    meter=$(printf '%*s' $(( GAUGE_CELLS + PCT_CELLS )) '')
   fi
   meter+=" ${DIM}$(printf '%*s' "$TOKENS_CELLS" "$tok_str")${RESET}"
 

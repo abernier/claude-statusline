@@ -143,9 +143,100 @@ It removes both scripts from `~/.claude/`, the `statusLine` and
 `subagentStatusLine` entries in `settings.json`, and the cache under
 `~/.claude/cache/`. It backs up the scripts and `settings.json` as `.bak`
 first. It changes nothing else, and it leaves an entry alone if it points at
-another statusline. `--no-settings` removes the scripts only.
+another statusline. It leaves `~/.statuslinerc` alone. `--no-settings`
+removes the scripts only.
 
 </details>
+
+## Settings
+
+Optional: everything works without a config file. `~/.statuslinerc` is there
+when you want to change what the second row draws.
+
+Both scripts source it, so it is plain shell — one assignment per line, `#`
+for a comment. What the environment already carries wins over the file, so
+`GAUGE=none claude` tries a setting for one session without editing anything.
+Point `STATUSLINE_RC` at another path to read another file.
+
+```sh
+# ~/.statuslinerc
+GAUGE=meter                       # the form every gauge takes — see below
+GAUGE_CTX=bar                     # …except this one
+COUNTDOWN=80                      # only show ↻ from 80% used
+STATUSLINE_LOC_MAX=34             # pin the first row's name budget
+CLAUDE_STATUSLINE_NO_KEYCHAIN=1   # never ask the Keychain for the token
+```
+
+### GAUGE
+
+Every gauge takes one of three forms, and `GAUGE` names it:
+
+- `bar` — the 10-cell track
+- `meter` — the compact vertical meter Fable uses: usage height beside the
+  window's clock, in eighths, on the same dark track
+- `none` — no gauge at all. The percentage carries the segment on its own.
+
+```text
+GAUGE unset (as it ships)  Ctx ███░░░░░░░ 28% 90k │ 5h ▀▀░░░░░░░░ 4% ↻2h │ 7d ▀▀▀░░░░░░░ 16% ↻3d10h │ Fable ▁▅ 8%
+GAUGE="meter"              Ctx ▃ 28% 90k │ 5h ▁▅ 4% ↻2h │ 7d ▂▄ 16% ↻3d10h │ Fable ▁▅ 8%
+GAUGE="none"               Ctx 28% 90k │ 5h 4% ↻2h │ 7d 16% ↻3d10h │ Fable 8%
+GAUGE="bar"                Ctx ███░░░░░░░ 28% 90k │ 5h ▀▀░░░░░░░░ 4% ↻2h │ 7d ▀▀▀░░░░░░░ 16% ↻3d10h │ Fable █░░░░░░░░░ 8%
+```
+
+`GAUGE_CTX`, `GAUGE_5H`, `GAUGE_7D` and `GAUGE_FABLE` name one gauge each and
+win over `GAUGE`, so you can fold the row and keep one track:
+
+```sh
+GAUGE=meter
+GAUGE_CTX=bar
+```
+
+Left alone, they are the row as it ships: bars, and the meter for Fable, whose
+window is secondary enough to get a glance rather than a track. Setting `GAUGE`
+governs every gauge, Fable included — `GAUGE=none` really does strip the whole
+row down to its numbers.
+
+The percentages never move: they carry the exact number whichever form the
+gauge takes, and they keep their own absolute colors.
+
+A gauge with no window time to plot draws a single column instead of two —
+`ctx`, which has no clock, and a limit window that arrives without a reset
+time. It then takes the percentage's color rather than the pace color, the
+same way its bar does.
+
+`GAUGE_CTX` reaches the agent panel too: it is the form of every subagent's
+context gauge, and the rows are drawn to whatever width it implies.
+
+### COUNTDOWN
+
+The `↻` on a limit window says how long until it resets. `COUNTDOWN` is the
+usage percentage a window has to reach before it shows it: `0`, the default,
+shows it always, and `none` never does.
+
+```text
+COUNTDOWN unset / 0   5h ▀▀░░░░░░░░ 4% ↻2h │ 7d ▀▀▀░░░░░░░ 16% ↻3d10h
+COUNTDOWN="80"        5h ▀▀░░░░░░░░ 4% │ 7d ▀▀▀░░░░░░░ 16%          ← under the threshold
+COUNTDOWN="80"        5h ████████▌░ 85% ↻2h │ 7d ▀▀▀░░░░░░░ 16%     ← 5h has crossed it
+COUNTDOWN="none"      5h ▀▀░░░░░░░░ 4% │ 7d ▀▀▀░░░░░░░ 16%
+```
+
+`COUNTDOWN_5H`, `COUNTDOWN_7D` and `COUNTDOWN_FABLE` name one window each and
+win over `COUNTDOWN`, the way `GAUGE_<ID>` does — `COUNTDOWN=none
+COUNTDOWN_5H=0` keeps the 5-hour clock and drops the others.
+
+`COUNTDOWN_FABLE` defaults to `none`, which is the row as it has always been:
+Fable's reset usually lands close enough to the 7-day one that the segment
+before it reads for both. That is a habit rather than a rule — the usage
+payload gives the Fable window a `resets_at` of its own, and the two can say
+different things:
+
+```text
+COUNTDOWN_FABLE="0"   7d ▀▀▀░░░░░░░ 16% ↻3d9h │ Fable ▅▃ 62% ↻4d0h
+```
+
+So turn it on if you actually use Fable. There is no `COUNTDOWN_CTX`: the
+context window is a size, not a window in time, and has nothing to count down
+to.
 
 ## What it shows
 
@@ -185,7 +276,8 @@ claude-statusline ⎇ main                             3 mod │ +182 -47
   Claude Code passes the terminal width in `COLUMNS`, which requires v2.1.153
   or later. Without it the budget is a fixed 64 columns minus the groups. It
   never falls below 24 columns, however narrow the terminal. To pin it to a
-  fixed number, set `STATUSLINE_LOC_MAX`, which overrides both. Widths are
+  fixed number, set `STATUSLINE_LOC_MAX` (in the environment or in
+  `~/.statuslinerc`), which overrides both. Widths are
   measured in terminal columns: a CJK or emoji glyph counts as two.
 - **3 mod** — how many files changed, by kind: `add`, `mod`, `del`, and `?`
   for untracked. The count carries the weight and the color; the label stays
@@ -205,9 +297,10 @@ claude-statusline ⎇ main                             3 mod │ +182 -47
 - **Ctx** — how full the context window is, 0–100%, and the token count in
   thousands
 - **5h / 7d** — the 5-hour and 7-day rate-limit windows: usage, elapsed time,
-  and `↻` the time until the reset
-- **Fable** — the same for the Fable weekly quota. It resets with the 7-day
-  window, so it shows no `↻` of its own
+  and `↻` the time until the reset, which [`COUNTDOWN`](#countdown) can hold
+  back until the window is far enough along
+- **Fable** — the same for the Fable weekly quota. It shows no `↻` of its own
+  unless [`COUNTDOWN_FABLE`](#countdown) asks for one
 
 ## How to read it
 
@@ -245,7 +338,8 @@ own context bar, model, and effort.
 ![Three agent rows, each with its own context bar, model and effort: one holds at 34%, one climbs into red, one starts late and stays green.](docs/assets/loop-agents.gif)
 
 On a narrow panel, the effort column drops first and the model column second.
-Requires Claude Code v2.1.205 or later.
+Requires Claude Code v2.1.205 or later. [`GAUGE_CTX`](#gauge) sets the form of
+the context gauge here too.
 
 ### The Fable window
 
@@ -254,7 +348,10 @@ Requires Claude Code v2.1.205 or later.
 Fable has its own weekly quota. The limit is usually lower than for other
 models, so it gets a glance instead of a track: two columns, your usage beside
 the week's clock, and the exact number in the percentage. Fable resets with
-the 7-day window, so it shows no `↻` of its own.
+the 7-day window, so it shows no `↻` of its own — though it has a reset time of
+its own in the payload, and [`COUNTDOWN_FABLE`](#countdown) puts it back on the
+row. It is the one gauge drawn as a meter by default — [`GAUGE`](#gauge)
+decides the form of all four.
 
 Claude Code does not send this value. The script reads it from `~/.claude.json`
 and refreshes it from the API in the background, at most every ten minutes.
@@ -262,8 +359,9 @@ and refreshes it from the API in the background, at most every ten minutes.
 On macOS the refresh reads the OAuth token from the Keychain, because Claude
 Code stores it there instead of in `~/.claude/.credentials.json`. The first
 read can open a Keychain dialog. Click **Always Allow** once and it stops
-asking. To skip the Keychain, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1`. The Fable
-bar then uses only the CLI's own cache.
+asking. To skip the Keychain, set `CLAUDE_STATUSLINE_NO_KEYCHAIN=1` in the
+environment or in `~/.statuslinerc`. The Fable bar then uses only the CLI's own
+cache.
 
 ### Repo and git state
 
