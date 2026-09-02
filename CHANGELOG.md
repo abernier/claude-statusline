@@ -4,6 +4,17 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-09-02
+
+### Added
+
+- **The installer can be pointed at a fork.** `--repo <owner/name>` and
+  `$CLAUDE_STATUSLINE_REPO` choose the repository the two scripts are fetched
+  from, alongside the `--ref` / `$CLAUDE_STATUSLINE_REF` that already chose the
+  branch or tag. The value is validated the same way — one `owner/name`, no
+  dot-segments to walk out of the URL path — the default is unchanged, and the
+  output only mentions the repository when it is not the default one.
+
 ## 2026-08-31
 
 ### Changed

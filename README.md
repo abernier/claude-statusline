@@ -61,6 +61,10 @@ them executable, and points `settings.json` at them. It copies anything it
 replaces to `<file>.bak` first. Run it again to upgrade. `--no-settings`
 installs the scripts only. `--help` lists all options.
 
+It fetches the two scripts from this repository's `main`. `--repo <owner/name>`
+(or `$CLAUDE_STATUSLINE_REPO`) takes them from a fork instead, and `--ref <ref>`
+(or `$CLAUDE_STATUSLINE_REF`) from another branch or tag.
+
 </details>
 
 <details>
