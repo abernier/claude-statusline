@@ -61,15 +61,18 @@ them executable, and points `settings.json` at them. It copies anything it
 replaces to `<file>.bak` first. Run it again to upgrade. `--no-settings`
 installs the scripts only. `--help` lists all options.
 
-It fetches the two scripts from this repository's `main`. `--repo <owner/name>`
-(or `$CLAUDE_STATUSLINE_REPO`) takes them from a fork instead, and `--ref <ref>`
-(or `$CLAUDE_STATUSLINE_REF`) from another branch or tag. A fork usually keeps
-its own `main` in step with this one, so in practice the two travel together:
+It fetches the two scripts from this repository's default branch.
+`--repo <owner/name>` (or `$CLAUDE_STATUSLINE_REPO`) takes them from a fork
+instead — and from that fork's own default branch, so a fork whose work does
+not live on `main` needs nothing else:
 
 ```sh
 curl -fsSL https://alp82.github.io/claude-statusline/install.sh \
-  | bash -s -- --repo you/claude-statusline --ref your-branch
+  | bash -s -- --repo you/claude-statusline
 ```
+
+`--ref <ref>` (or `$CLAUDE_STATUSLINE_REF`) names a branch or tag explicitly,
+for a pinned version or a branch that is not the default one.
 
 Only the two scripts follow `--repo`. The installer itself is whatever you
 fetched, from wherever you fetched it — so a fork that wants a one-liner of its

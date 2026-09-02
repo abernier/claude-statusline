@@ -16,7 +16,10 @@ set -euo pipefail
 
 DEFAULT_REPO="alp82/claude-statusline"
 REPO="${CLAUDE_STATUSLINE_REPO:-$DEFAULT_REPO}"
-REF="${CLAUDE_STATUSLINE_REF:-main}"
+# Left empty, REF is resolved after the arguments are read: it defaults to
+# whatever the repository in use calls its default branch, which is the only
+# answer that stays right for a fork whose work is not on `main`.
+REF="${CLAUDE_STATUSLINE_REF:-}"
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 UNINSTALL=0
@@ -50,12 +53,13 @@ Installs the statusline, or updates it in place if you already have it.
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
-  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline --ref your-branch
+  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline
 
 Options:
   --dir <path>         Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
   --repo <owner/name>  repository to install from (default: $REPO)
-  --ref <ref>          branch or tag to install from (default: $REF)
+  --ref <ref>          branch or tag to install from
+                       (default: that repository's default branch)
   --no-settings        install the scripts only; print the settings.json snippet
                        instead of writing it. With --uninstall, remove the
                        scripts but leave settings.json alone.
@@ -92,6 +96,18 @@ done
 # shift every following segment left by one.
 [[ $REPO =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$ && $REPO != *..* && $REPO != */. ]] \
   || die "invalid --repo: $REPO — expected owner/name, e.g. $DEFAULT_REPO."
+
+# Nothing named a ref, so the repository is asked what it calls its default
+# branch. Hard-coding `main` here would be right for this repository and wrong
+# for a fork whose work lives elsewhere — and `--repo` without `--ref` would
+# then install this repository's files under the fork's name, silently. One
+# call, five seconds, and `main` when the API cannot answer: offline, rate
+# limited, or a repository it will not speak for.
+if [[ -z $REF ]]; then
+  REF=$(curl -fsSL --max-time 5 "https://api.github.com/repos/$REPO" 2>/dev/null \
+        | jq -r '.default_branch // empty' 2>/dev/null) || REF=''
+  [[ -n $REF ]] || REF=main
+fi
 
 # REF is interpolated into the same URL, and curl removes dot-segments before
 # the request — so `--ref ../../someone-else/repo/main` would quietly escape the

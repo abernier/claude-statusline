@@ -16,6 +16,12 @@ better than a version number would.
   output only mentions the repository when it is not the default one. Only the
   fetched scripts follow it: the installer is whatever was fetched, from
   wherever it was fetched.
+- **The installer follows a repository's default branch.** `--ref` used to
+  default to the literal `main`, which is right for this repository and wrong
+  for a fork whose work is not there — `--repo` alone would then have installed
+  these files under the fork's name, silently. The repository is asked instead,
+  in one call, falling back to `main` when the API cannot answer. `--ref` still
+  names a branch or tag outright.
 
 ## 2026-08-31
 
