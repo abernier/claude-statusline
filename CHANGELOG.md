@@ -1,8 +1,27 @@
 # Changelog
 
 Notable changes, newest first. Dates instead of versions: the install one-liner
-always serves `main`, so a date names a state of `main` better than a version
-number would.
+serves `main` unless it is told otherwise, so a date names a state of `main`
+better than a version number would.
+
+## 2026-09-02
+
+### Added
+
+- **The installer can be pointed at a fork.** `--repo <owner/name>` and
+  `$CLAUDE_STATUSLINE_REPO` choose the repository the two scripts are fetched
+  from, alongside the `--ref` / `$CLAUDE_STATUSLINE_REF` that already chose the
+  branch or tag. The value is validated the same way — one `owner/name`, no
+  dot-segments to walk out of the URL path — the default is unchanged, and the
+  output only mentions the repository when it is not the default one. Only the
+  fetched scripts follow it: the installer is whatever was fetched, from
+  wherever it was fetched.
+- **The installer follows a repository's default branch.** `--ref` used to
+  default to the literal `main`, which is right for this repository and wrong
+  for a fork whose work is not there — `--repo` alone would then have installed
+  these files under the fork's name, silently. The repository is asked instead,
+  in one call, falling back to `main` when the API cannot answer. `--ref` still
+  names a branch or tag outright.
 
 ## 2026-08-31
 

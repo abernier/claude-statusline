@@ -14,8 +14,12 @@
 
 set -euo pipefail
 
-REPO="alp82/claude-statusline"
-REF="${CLAUDE_STATUSLINE_REF:-main}"
+DEFAULT_REPO="alp82/claude-statusline"
+REPO="${CLAUDE_STATUSLINE_REPO:-$DEFAULT_REPO}"
+# Left empty, REF is resolved after the arguments are read: it defaults to
+# whatever the repository in use calls its default branch, which is the only
+# answer that stays right for a fork whose work is not on `main`.
+REF="${CLAUDE_STATUSLINE_REF:-}"
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 UNINSTALL=0
@@ -49,23 +53,27 @@ Installs the statusline, or updates it in place if you already have it.
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline
 
 Options:
-  --dir <path>     Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
-  --ref <ref>      branch or tag to install from (default: $REF)
-  --no-settings    install the scripts only; print the settings.json snippet
-                   instead of writing it. With --uninstall, remove the scripts
-                   but leave settings.json alone.
-  --uninstall      remove both scripts and drop the statusLine and
-                   subagentStatusLine entries from settings.json, backing
-                   everything up first
-  -h, --help       this help
+  --dir <path>         Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
+  --repo <owner/name>  repository to install from (default: $REPO)
+  --ref <ref>          branch or tag to install from
+                       (default: that repository's default branch)
+  --no-settings        install the scripts only; print the settings.json snippet
+                       instead of writing it. With --uninstall, remove the
+                       scripts but leave settings.json alone.
+  --uninstall          remove both scripts and drop the statusLine and
+                       subagentStatusLine entries from settings.json, backing
+                       everything up first
+  -h, --help           this help
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --dir)          CONFIG_DIR=${2:?--dir needs a path}; shift 2 ;;
+    --repo)         REPO=${2:?--repo needs an owner/name}; shift 2 ;;
     --ref)          REF=${2:?--ref needs a ref}; shift 2 ;;
     --no-settings)  PATCH_SETTINGS=0; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
@@ -79,9 +87,31 @@ done
 # render. Anchor it here, while $PWD still means what the user typed it against.
 [[ $CONFIG_DIR == /* ]] || CONFIG_DIR="$PWD/${CONFIG_DIR#./}"
 
-# REF is interpolated into a URL, and curl removes dot-segments before the
-# request — so `--ref ../../someone-else/repo/main` would quietly escape the
-# REPO pin above while the printed URL still reads as this repo.
+# REPO fills two path segments of the raw.githubusercontent URL, so it has to
+# be one owner and one name and nothing else: a slash too many, or a `..` that
+# curl collapses before the request, and the fetch walks off to some other
+# repository while the printed URL still reads as this one. GitHub owners are
+# alphanumeric with hyphens; names also allow dots and underscores, hence the
+# wider second half — and the trailing `.` case, which would collapse away and
+# shift every following segment left by one.
+[[ $REPO =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$ && $REPO != *..* && $REPO != */. ]] \
+  || die "invalid --repo: $REPO — expected owner/name, e.g. $DEFAULT_REPO."
+
+# Nothing named a ref, so the repository is asked what it calls its default
+# branch. Hard-coding `main` here would be right for this repository and wrong
+# for a fork whose work lives elsewhere — and `--repo` without `--ref` would
+# then install this repository's files under the fork's name, silently. One
+# call, five seconds, and `main` when the API cannot answer: offline, rate
+# limited, or a repository it will not speak for.
+if [[ -z $REF ]]; then
+  REF=$(curl -fsSL --max-time 5 "https://api.github.com/repos/$REPO" 2>/dev/null \
+        | jq -r '.default_branch // empty' 2>/dev/null) || REF=''
+  [[ -n $REF ]] || REF=main
+fi
+
+# REF is interpolated into the same URL, and curl removes dot-segments before
+# the request — so `--ref ../../someone-else/repo/main` would quietly escape the
+# repository $REPO names while the printed URL still reads as that repository.
 [[ $REF =~ ^[A-Za-z0-9._/-]+$ && $REF != *..* ]] || die "invalid --ref: $REF"
 
 # A commit SHA is not the pin it looks like: raw.githubusercontent serves any
@@ -279,6 +309,9 @@ fetch() {
 
 tmp=$(mktemp)
 sub_tmp=$(mktemp)
+# The two lines below name only the ref, so say where they point when that is
+# not this repository — installing from a fork should not look like upstream.
+[[ $REPO == "$DEFAULT_REPO" ]] || step "fetching from $REPO ${DIM}(not $DEFAULT_REPO)${RESET}"
 step "fetching statusline.sh @ $REF"
 fetch "$SOURCE_URL" "$tmp"
 step "fetching subagent-statusline.sh @ $REF"
