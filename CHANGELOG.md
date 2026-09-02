@@ -12,10 +12,11 @@ number would.
   `docs/.nojekyll` is gone and `docs/index.html` has front matter: GitHub Pages
   now renders the page instead of copying it, and every repository reference in
   it — the links, the two install one-liners, the uninstall one, the by-hand
-  `raw.githubusercontent` fetches — comes from `site.github.*` rather than a
-  name written into the file. A fork's page therefore installs the fork's
-  scripts: the commands carry `--repo <that fork>`, the raw URLs carry the
-  branch Pages builds from, and a line in the sidebar and the footer says which
+  `raw.githubusercontent` fetches — is derived from the one repository name the
+  build knows, rather than a name written into the file. A fork's page
+  therefore installs the fork's scripts: the commands carry `--repo <that
+  fork>`, the raw URLs use `HEAD` so they follow whatever branch that
+  repository calls default, and a line in the sidebar and the footer says which
   repository it is a fork of. Built from this repository the page is unchanged,
   byte for byte. `docs/Gemfile` pins the `github-pages` gem so a build that is
   not GitHub Pages resolves the same toolchain.
