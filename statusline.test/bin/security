@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# The macOS Keychain lookup can raise a modal dialog, which would hang a run on
+# a developer's machine. CLAUDE_STATUSLINE_NO_KEYCHAIN=1 already skips it; this
+# is the second lock on the same door.
+exit 1

@@ -1,0 +1,8 @@
+AM new-feature.sh
+A  another.sh
+ M statusline.sh
+MM README.md
+ D old.sh
+D  gone.sh
+?? scratch.txt
+?? notes/

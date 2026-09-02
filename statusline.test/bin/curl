@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# No network in a test. statusline.sh only calls curl from the background usage
+# refresh, which already ignores a failed fetch — so failing here exercises a
+# path the script handles rather than one it has to be shielded from.
+exit 1

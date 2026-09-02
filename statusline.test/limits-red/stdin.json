@@ -1,0 +1,15 @@
+{
+  "model": { "display_name": "Claude Opus 5" },
+  "effort": { "level": "xhigh" },
+  "workspace": { "current_dir": "/Users/dev/code/claude-statusline" },
+  "version": "2.1.211",
+  "context_window": {
+    "used_percentage": 62,
+    "total_input_tokens": 600000,
+    "total_output_tokens": 40000
+  },
+  "rate_limits": {
+    "five_hour": { "used_percentage": 91, "resets_at": 1767226320 },
+    "seven_day": { "used_percentage": 84, "resets_at": 1767520800 }
+  }
+}

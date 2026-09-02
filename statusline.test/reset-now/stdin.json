@@ -1,0 +1,9 @@
+{
+  "model": { "display_name": "Claude Opus 5" },
+  "version": "2.1.211",
+  "context_window": { "used_percentage": 25, "total_input_tokens": 240000, "total_output_tokens": 10000 },
+  "rate_limits": {
+    "five_hour": { "used_percentage": 100, "resets_at": 1767225640 },
+    "seven_day": { "used_percentage": 0, "resets_at": 1767520800 }
+  }
+}

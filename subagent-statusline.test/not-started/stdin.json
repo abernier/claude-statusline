@@ -1,0 +1,21 @@
+{
+  "columns": 120,
+  "tasks": [
+    {
+      "id": "a1",
+      "name": "Explore",
+      "description": "not started yet: no model, so no window and no percentage",
+      "tokenCount": 0,
+      "contextWindowSize": 0
+    },
+    {
+      "id": "a2",
+      "name": "general-purpose",
+      "description": "running",
+      "model": "claude-opus-5",
+      "effort": "max",
+      "tokenCount": 8000,
+      "contextWindowSize": 200000
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "columns": 120,
+  "tasks": [
+    { "id": "a1", "name": "old", "model": "claude-3-7-sonnet-20250219", "tokenCount": 1000, "contextWindowSize": 200000 },
+    { "id": "a2", "name": "older", "model": "claude-3-opus-20240229", "tokenCount": 2000, "contextWindowSize": 200000 },
+    { "id": "a3", "name": "fable", "model": "claude-fable-5-1", "effort": "xhigh", "tokenCount": 3000, "contextWindowSize": 200000 },
+    { "id": "a4", "name": "unknown", "model": "some-other-model", "tokenCount": 4000, "contextWindowSize": 200000 }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "model": { "display_name": "Claude Sonnet 5" },
+  "workspace": { "current_dir": "/Users/dev/code/claude-statusline" },
+  "version": "2.1.211",
+  "context_window": { "used_percentage": 14 }
+}

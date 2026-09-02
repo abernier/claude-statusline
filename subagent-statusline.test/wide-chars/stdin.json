@@ -1,0 +1,23 @@
+{
+  "columns": 100,
+  "tasks": [
+    {
+      "id": "a1",
+      "name": "状態行",
+      "description": "幅の広い文字は二列を占める",
+      "model": "claude-opus-5",
+      "effort": "high",
+      "tokenCount": 42000,
+      "contextWindowSize": 200000
+    },
+    {
+      "id": "a2",
+      "name": "ascii",
+      "description": "and this row must line up with it",
+      "model": "claude-sonnet-5",
+      "effort": "low",
+      "tokenCount": 9000,
+      "contextWindowSize": 200000
+    }
+  ]
+}

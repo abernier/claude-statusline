@@ -1,0 +1,14 @@
+{
+  "cachedUsageUtilization": {
+    "fetchedAtMs": 1767225000000,
+    "utilization": {
+      "limits": [
+        {
+          "kind": "weekly_scoped",
+          "scope": { "model": { "display_name": "Claude Fable 5.1" } },
+          "percent": 73
+        }
+      ]
+    }
+  }
+}

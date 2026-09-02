@@ -1,0 +1,39 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # Both, on purpose. The script straddles GNU and BSD in several places —
+    # `stat -c` against `stat -f`, `date -d` against `date -j -f`, and the awk
+    # that reads git's porcelain — and a suite that only ever ran on Linux
+    # would never exercise the half of it that macOS takes.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The /bin/bash macOS ships is 3.2, where `printf '%d' "'X"` returns a
+      # byte rather than a codepoint, so every wide character measures at half
+      # its width. The suite refuses to run there rather than record that as
+      # correct — so the runner needs a real bash first on PATH.
+      - name: bash 4+
+        if: runner.os == 'macOS'
+        run: |
+          brew list bash >/dev/null 2>&1 || brew install bash
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: versions
+        run: |
+          command -v bash
+          bash --version | head -1
+          jq --version
+
+      - run: ./statusline.test.sh
+      - run: ./subagent-statusline.test.sh

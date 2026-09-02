@@ -1,0 +1,23 @@
+{
+  "columns": 56,
+  "tasks": [
+    {
+      "id": "a1",
+      "name": "Explore",
+      "description": "map the location budget across the implementations",
+      "model": "claude-opus-5[1m]",
+      "effort": "high",
+      "tokenCount": 42000,
+      "contextWindowSize": 1000000
+    },
+    {
+      "id": "a2",
+      "name": "code-review",
+      "description": "review the golden-file harness",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "tokenCount": 96000,
+      "contextWindowSize": 200000
+    }
+  ]
+}
