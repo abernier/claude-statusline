@@ -50,6 +50,7 @@ Installs the statusline, or updates it in place if you already have it.
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline --ref your-branch
 
 Options:
   --dir <path>         Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)

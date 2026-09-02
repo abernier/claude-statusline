@@ -63,7 +63,19 @@ installs the scripts only. `--help` lists all options.
 
 It fetches the two scripts from this repository's `main`. `--repo <owner/name>`
 (or `$CLAUDE_STATUSLINE_REPO`) takes them from a fork instead, and `--ref <ref>`
-(or `$CLAUDE_STATUSLINE_REF`) from another branch or tag.
+(or `$CLAUDE_STATUSLINE_REF`) from another branch or tag. A fork usually keeps
+its own `main` in step with this one, so in practice the two travel together:
+
+```sh
+curl -fsSL https://alp82.github.io/claude-statusline/install.sh \
+  | bash -s -- --repo you/claude-statusline --ref your-branch
+```
+
+Only the two scripts follow `--repo`. The installer itself is whatever you
+fetched, from wherever you fetched it — so a fork that wants a one-liner of its
+own serves this file from its own pages. When the repository is not this one,
+the installer says so before it fetches, so a wrong `--repo` is visible rather
+than silent.
 
 </details>
 

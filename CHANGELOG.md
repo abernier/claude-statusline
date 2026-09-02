@@ -13,7 +13,9 @@ number would.
   from, alongside the `--ref` / `$CLAUDE_STATUSLINE_REF` that already chose the
   branch or tag. The value is validated the same way — one `owner/name`, no
   dot-segments to walk out of the URL path — the default is unchanged, and the
-  output only mentions the repository when it is not the default one.
+  output only mentions the repository when it is not the default one. Only the
+  fetched scripts follow it: the installer is whatever was fetched, from
+  wherever it was fetched.
 
 ## 2026-08-31
 
