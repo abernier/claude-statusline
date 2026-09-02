@@ -4,6 +4,25 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-09-02
+
+### Added
+
+- **A golden-file test suite for both scripts.** `statusline.test.sh` and
+  `subagent-statusline.test.sh` sit next to the scripts they cover, each with
+  its fixtures in a sibling `.test/` directory. A fixture is the JSON to feed
+  in and the exact bytes that must come out, escape sequences included: a
+  statusline is a rendering, so the rendering is what is asserted. The three
+  things the script reads from the machine — the clock, git, and `$HOME` — are
+  replaced by stubs, so a fixture is the whole world the script sees and a
+  countdown recorded today still reads `↻2h0m` next year. Twenty-five fixtures
+  for the line (both floors of the elision ladder, the worktree glyph, every
+  file kind and one-sided line counts, the colour thresholds, gauges with no
+  `resets_at`, the Fable meter, a trimmed CJK name, a C-locale shell, an empty
+  payload) and six for the agent panel (the shared grid, the columns it drops
+  as the panel narrows, the legacy model ids). `.github/workflows/test.yml`
+  runs both on Linux and macOS.
+
 ## 2026-08-31
 
 ### Changed

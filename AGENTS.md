@@ -14,6 +14,14 @@ The docked line's working-tree state (`DEFAULTS` in `docs/index.html`) and the `
 
 The annotation over a bar — the racers named, the gap read out, the effort row — is drawn twice: by `annotate()` in `docs/index.html` and by `remotion/src/statusline/Annotation.tsx`. The page measures the painted bar, the render computes it from `theme.ts`, and both carry the same pixel constants. Change one, change the other.
 
+## Tests
+
+Each script has a golden-file suite sitting next to it: `statusline.test.sh` with its fixtures in `statusline.test/`, `subagent-statusline.test.sh` with its own in `subagent-statusline.test/`. A fixture is a directory holding the JSON to feed in and the exact bytes that must come out, escape sequences included — a statusline is a rendering, so the rendering is what is asserted. Run either with no argument for the whole suite, a substring to select fixtures, `--update` to re-record; `.github/workflows/test.yml` runs both on Linux and macOS.
+
+The scripts read three things from the machine — the clock, git, and `$HOME` — and each one would make two runs differ, so all three are replaced by stubs in `statusline.test/bin/`. `date +%s` returns a frozen epoch (2026-01-01T00:00:00Z, which every `resets_at` in a fixture is an offset from), git answers the four calls it gets from files in the fixture, and `$HOME` is a fresh temp dir — which also keeps the background usage refresh off the network and out of the Keychain. Add a git call to `statusline.sh` and the stub logs it and fails the run: the script swallows both the stderr and the exit status of every git call it makes, so the log is the only place a new one shows up. `subagent-statusline.sh` needs none of this — it reads its stdin and nothing else, which is why the two runners are separate files.
+
+The suite needs bash 4 or newer. On the 3.2 that macOS ships as `/bin/bash`, `printf '%d' "'X"` yields a byte rather than a codepoint, so `wide()` measures every CJK name at half its width — the runner probes for that and stops rather than recording it as correct.
+
 ## Update guide
 
 For every day where changes are made, update CHANGELOG.md.
