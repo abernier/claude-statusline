@@ -11,9 +11,3 @@ plugins:
 # 136 KB stylesheet into assets/ beside the page's own media. The page carries
 # its own CSS and asks for no layout, so there is nothing for a theme to do.
 theme: null
-
-# `index.html` otherwise derives the conventional project-page URL from the
-# repository name. Override it for a custom domain, a user/organization Pages
-# repository (which is served at `/`, not `/<repo>`), or another preview host.
-# Do not include a trailing slash:
-# statusline_pages_url: https://statusline.example.com
