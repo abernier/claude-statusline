@@ -17,9 +17,11 @@ number would.
   therefore installs the fork's scripts: the commands carry `--repo <that
   fork>`, the raw URLs use `HEAD` so they follow whatever branch that
   repository calls default, and a line in the sidebar and the footer says which
-  repository it is a fork of. Built from this repository the page is unchanged,
-  byte for byte. `docs/Gemfile` pins the `github-pages` gem so a build that is
-  not GitHub Pages resolves the same toolchain.
+  repository it is a fork of. `docs/Gemfile` pins the `github-pages` gem so a
+  build that is not GitHub Pages resolves the same toolchain. The conventional
+  `https://<owner>.github.io/<repo>` Pages URL is used by default;
+  `statusline_pages_url` overrides it for custom domains, user/organization
+  Pages repositories, and other hosts.
 
 ## 2026-08-31
 

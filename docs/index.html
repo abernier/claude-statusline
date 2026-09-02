@@ -25,7 +25,15 @@
 {%- endcomment -%}
 {%- assign owner = nwo | split: "/" | first -%}
 {%- assign name = nwo | split: "/" | last -%}
-{%- assign pages = "https://" | append: owner | append: ".github.io/" | append: name -%}
+{%- comment -%}
+  This fallback is the conventional GitHub project-page URL and keeps local and
+  credential-free preview builds deterministic. A user/organization Pages repo,
+  custom domain, or another host can set `statusline_pages_url` in _config.yml
+  (or an additional config file) to supply its public base URL without a
+  trailing slash.
+{%- endcomment -%}
+{%- assign default_pages = "https://" | append: owner | append: ".github.io/" | append: name -%}
+{%- assign pages = site.statusline_pages_url | default: default_pages -%}
 {%- assign ref = "HEAD" -%}
 {%- if nwo == canonical -%}
 {%- assign cmd_install = "bash" -%}
