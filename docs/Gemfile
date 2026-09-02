@@ -1,0 +1,10 @@
+# GitHub Pages builds this site with its own pinned gem set and ignores this file.
+# It is here for the builds that are not GitHub Pages — the pull-request previews —
+# so they resolve the same set, and a preview cannot drift from the published page.
+#
+# Those builds have no GitHub context to read the repository from, so they must set
+# PAGES_REPO_NWO=owner/name in the environment; jekyll-github-metadata reads it
+# before anything else.
+source "https://rubygems.org"
+
+gem "github-pages", "~> 232", group: :jekyll_plugins
