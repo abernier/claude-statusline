@@ -4,7 +4,7 @@
 
 ## Are you spending faster than the clock?
 
-[![Stars, Forks, Open Issues and License](https://shieldcn.dev/group/github/stars/alp82/claude-statusline+github/forks/alp82/claude-statusline+github/open-issues/alp82/claude-statusline+github/license/alp82/claude-statusline.svg?variant=secondary)](https://github.com/alp82/claude-statusline)
+[![Stars, Forks, Open Issues and License](https://shieldcn.dev/group/github/stars/abernier/claude-statusline+github/forks/abernier/claude-statusline+github/open-issues/abernier/claude-statusline+github/license/abernier/claude-statusline.svg?variant=secondary)](https://github.com/abernier/claude-statusline)
 
 [![Claude Code](https://shieldcn.dev/badge/Claude-Code-D97757.svg?logo=anthropic&variant=branded&size=lg)](https://claude.com/claude-code)
 [![Statusline](https://shieldcn.dev/badge/statusline-bash-D97757.svg?variant=outline&size=lg)](https://code.claude.com/docs/en/statusline.md)
@@ -21,7 +21,7 @@ window sit on the same line, under the prompt.
 
 ![The whole statusline from Ctx rightward, every window moving at once.](docs/assets/loop-whole-line.gif)
 
-**[See it in motion → alp82.github.io/claude-statusline](https://alp82.github.io/claude-statusline/)**
+**[See it in motion → abernier.github.io/claude-statusline](https://abernier.github.io/claude-statusline/)**
 
 </div>
 
@@ -35,8 +35,8 @@ version. Claude installs or replaces the scripts, updates the settings, and
 checks the result.
 
 ```text
-Install or update the statusline from https://github.com/alp82/claude-statusline for me.
-Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+Install or update the statusline from https://github.com/abernier/claude-statusline for me.
+Run: curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash
 Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
 points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
 ~/.claude/subagent-statusline.sh, and tell me what to do next.
@@ -53,7 +53,7 @@ The same script without the agent. It installs the statusline, and updates it
 if you already have it:
 
 ```sh
-curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash
 ```
 
 It puts `statusline.sh` and `subagent-statusline.sh` into `~/.claude/`, makes
@@ -67,7 +67,7 @@ It fetches the two scripts from this repository's `main`. `--repo <owner/name>`
 its own `main` in step with this one, so in practice the two travel together:
 
 ```sh
-curl -fsSL https://alp82.github.io/claude-statusline/install.sh \
+curl -fsSL https://abernier.github.io/claude-statusline/install.sh \
   | bash -s -- --repo you/claude-statusline --ref your-branch
 ```
 
@@ -87,9 +87,9 @@ than silent.
 Two files, nothing else:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
+curl -fsSL https://raw.githubusercontent.com/abernier/claude-statusline/abernier/statusline.sh \
   -o ~/.claude/statusline.sh
-curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh \
+curl -fsSL https://raw.githubusercontent.com/abernier/claude-statusline/abernier/subagent-statusline.sh \
   -o ~/.claude/subagent-statusline.sh
 chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh
 ```
@@ -123,8 +123,8 @@ only move when something else happens. Raise it on a large repository, where
 The same prompt in reverse:
 
 ```text
-Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
-Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+Uninstall the statusline from https://github.com/abernier/claude-statusline for me.
+Run: curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash -s -- --uninstall
 Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,
 confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,
 and show me which .bak files it left behind.
@@ -136,7 +136,7 @@ and show me which .bak files it left behind.
 <br>
 
 ```sh
-curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash -s -- --uninstall
 ```
 
 It removes both scripts from `~/.claude/`, the `statusLine` and

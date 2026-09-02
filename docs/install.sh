@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# claude-statusline installer — https://github.com/alp82/claude-statusline
+# claude-statusline installer — https://github.com/abernier/claude-statusline
+# a fork of https://github.com/alp82/claude-statusline
 #
-#   curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+#   curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash
 #
 # Lives in docs/ because docs/ is the GitHub Pages root — that is what makes the
 # one-liner above short. It is the only copy; the raw.githubusercontent URL
@@ -14,9 +15,12 @@
 
 set -euo pipefail
 
-DEFAULT_REPO="alp82/claude-statusline"
+# This fork's own defaults. Upstream ships alp82/claude-statusline and `main`;
+# here the scripts live on this fork's `abernier` branch, and `main` is kept as
+# an untouched mirror of upstream, so both defaults move together.
+DEFAULT_REPO="abernier/claude-statusline"
 REPO="${CLAUDE_STATUSLINE_REPO:-$DEFAULT_REPO}"
-REF="${CLAUDE_STATUSLINE_REF:-main}"
+REF="${CLAUDE_STATUSLINE_REF:-abernier}"
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 UNINSTALL=0
@@ -47,10 +51,10 @@ ${BOLD}claude-statusline installer${RESET}
 
 Installs the statusline, or updates it in place if you already have it.
 
-  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
-  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --no-settings
-  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
-  curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline --ref your-branch
+  curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash
+  curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash -s -- --no-settings
+  curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+  curl -fsSL https://abernier.github.io/claude-statusline/install.sh | bash -s -- --repo you/claude-statusline --ref your-branch
 
 Options:
   --dir <path>         Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
