@@ -1,8 +1,8 @@
 # Changelog
 
 Notable changes, newest first. Dates instead of versions: the install one-liner
-always serves `main`, so a date names a state of `main` better than a version
-number would.
+serves `main` unless it is told otherwise, so a date names a state of `main`
+better than a version number would.
 
 ## 2026-09-02
 
