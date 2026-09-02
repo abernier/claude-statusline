@@ -23,6 +23,50 @@ better than a version number would.
   in one call, falling back to `main` when the API cannot answer. `--ref` still
   names a branch or tag outright.
 
+- **`~/.statuslinerc`, one settings file for both scripts.** It is sourced, so
+  it is plain shell: one assignment per line and `#` comments, nothing to
+  parse. What the environment already carries wins over the file — everything
+  exported is captured before the source and put back after it — so a one-off
+  `GAUGE=none claude` overrides it for a session, and no list of setting names
+  has to be kept in step. `STATUSLINE_RC` points at another path. The file is
+  optional and nothing changes without it; the existing `STATUSLINE_LOC_MAX`
+  and `CLAUDE_STATUSLINE_NO_KEYCHAIN` can live in it too.
+- **`GAUGE`: every gauge takes one of three forms.** `bar` is the 10-cell
+  track, `meter` the vertical meter Fable got on 2026-08-31, and `none` no
+  gauge at all — the percentage then carries the segment on its own, and the
+  whole row reads as numbers. `GAUGE_CTX`, `GAUGE_5H`, `GAUGE_7D` and
+  `GAUGE_FABLE` name one gauge each and win over `GAUGE`, so a row can be
+  folded and keep one track. Left alone they are the row as it shipped: bars,
+  and the meter for Fable. Setting `GAUGE` governs every gauge, Fable included.
+  The percentages are untouched, and keep their absolute colors. A gauge with
+  no window time to plot — `ctx`, or a limit window that arrives without a
+  reset time — draws a single column instead of two.
+- **`COUNTDOWN`: the `↻` can wait until a window is far enough along.** It is
+  the usage percentage a window has to reach before it shows its time-to-reset:
+  `0`, the default, shows it always, and `none` never does. `COUNTDOWN_5H`,
+  `COUNTDOWN_7D` and `COUNTDOWN_FABLE` name one window each and win over
+  `COUNTDOWN`, the way `GAUGE_<ID>` does. No `COUNTDOWN_CTX`: the context
+  window is a size, not a window in time.
+- **The Fable window can show its own `↻`.** It never has, on the grounds that
+  it resets with the 7-day window and the segment before it already says so.
+  The usage payload disagrees: the `weekly_scoped` entry carries a `resets_at`
+  of its own, null until the window is active, and the script has been parsing
+  it into `fable_reset` all along to draw the meter's blue column. So the two
+  can differ — `7d ↻3d9h │ Fable ↻4d0h` — and `COUNTDOWN_FABLE=0` puts the time
+  back on the row. It defaults to `none`, so the row is unchanged unless asked.
+- **`GAUGE_CTX` reaches the agent panel.** `subagent-statusline.sh` reads the
+  same setting: the per-agent context gauge takes that form, and the grid is
+  measured to whatever width it implies, so the columns after it still line up
+  across rows.
+
+### Changed
+
+- **The gauges go through one `meter()`.** `statusline.sh` chose its gauge
+  inline in each segment; the four now call `meter <id> <used> <time>`, which
+  reads `GAUGE` and draws the form it names, along with the space that
+  separates it from the label — `none` prints neither. The mockups in
+  `docs/index.html` and `remotion/` render the default and are unchanged.
+
 ## 2026-08-31
 
 ### Changed
