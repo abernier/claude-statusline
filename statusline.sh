@@ -5,6 +5,23 @@
 #   ★ Model · effort │ Ctx ▓▓░ 9% 90k │ 5h ▓░░ 4% ↻2h │ 7d ▓▓░ 16% ↻3d10h
 # Reads the statusline JSON from stdin (see https://code.claude.com/docs/en/statusline.md)
 
+# --- settings. ~/.statuslinerc is sourced, so it is plain shell: one
+# assignment per line and `#` comments, nothing to parse. Point $STATUSLINE_RC
+# at another path to read another file.
+#
+# What the environment already carries wins over the file: everything exported
+# is captured before the source and put back after it, so `GAUGE=none claude`
+# overrides the file for one session and no list of setting names has to be
+# kept in step here.
+STATUSLINE_RC=${STATUSLINE_RC:-$HOME/.statuslinerc}
+if [[ -r $STATUSLINE_RC ]]; then
+  rc_env=$(export -p)
+  # shellcheck source=/dev/null
+  source "$STATUSLINE_RC"
+  eval "$rc_env" 2>/dev/null
+  unset rc_env
+fi
+
 input=$(cat)
 
 # Tab is an IFS whitespace character, so bash collapses a run of tabs: one
@@ -170,6 +187,104 @@ stacked_bar() {
     out+="\033[${fg};${bg}m▀"
   done
   printf '%b\033[0m' "$out"
+}
+
+# vglyph <pct> — one block glyph whose height is the percentage, in eighths.
+# ▁ is the floor so 0% still shows a base.
+vglyph() {
+  local pct=$1 g=("▁" "▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+  (( pct < 0 )) && pct=0; (( pct > 100 )) && pct=100
+  printf '%s' "${g[$(( (pct * 8 + 50) / 100 ))]}"
+}
+
+# vert_meter <used_pct> <time_pct> — the stacked bar folded into two columns:
+# usage glyph (pace-colored, like stacked_bar) beside a blue time glyph, both
+# on the dark track.
+vert_meter() {
+  printf '\033[%s;%sm%s\033[38;2;80;130;220;%sm%s\033[0m' \
+    "$(pace_color "$1" "$2")" "$TRACK" "$(vglyph "$1")" "$TRACK" "$(vglyph "$2")"
+}
+
+# GAUGE — the form every gauge takes: `bar` for the 10-cell track, `meter` for
+# the two-column vertical meter, `none` for no gauge at all, where the
+# percentage carries the segment on its own. Anything else reads as `bar`.
+# GAUGE_CTX, GAUGE_5H, GAUGE_7D and GAUGE_FABLE name one gauge each and win
+# over GAUGE. Set them in ~/.statuslinerc.
+#
+# Left alone they are the row as it ships: bars, and the meter for Fable, whose
+# window is secondary enough to get a glance rather than a track. Setting GAUGE
+# governs every gauge, Fable included, so `GAUGE=none` really does strip the
+# whole row down to its numbers.
+GAUGE_CTX=${GAUGE_CTX:-${GAUGE:-bar}}
+GAUGE_5H=${GAUGE_5H:-${GAUGE:-bar}}
+GAUGE_7D=${GAUGE_7D:-${GAUGE:-bar}}
+GAUGE_FABLE=${GAUGE_FABLE:-${GAUGE:-meter}}
+
+# COUNTDOWN — the usage percentage a window has to reach before it shows its
+# `↻` time-to-reset. 0, the default, shows it always; `none` never does; a
+# value that is not a number reads as 0. COUNTDOWN_5H, COUNTDOWN_7D and
+# COUNTDOWN_FABLE name one window each and win over COUNTDOWN. Set them in
+# ~/.statuslinerc.
+#
+# Fable defaults to `none`, which is the row as it shipped: its reset usually
+# lands close enough to the 7-day one that the segment before it reads for
+# both. That is a habit, though, not a rule — the usage payload gives the
+# weekly_scoped entry a resets_at of its own, and it is null until the window
+# is active, so it is not the 7-day boundary wearing another name. Set
+# COUNTDOWN_FABLE=0 to read it. There is no COUNTDOWN_CTX: the context window
+# is a size, not a window in time, and has nothing to count down to.
+COUNTDOWN_5H=${COUNTDOWN_5H:-${COUNTDOWN:-0}}
+COUNTDOWN_7D=${COUNTDOWN_7D:-${COUNTDOWN:-0}}
+COUNTDOWN_FABLE=${COUNTDOWN_FABLE:-${COUNTDOWN:-none}}
+
+# shows_countdown <threshold> <used_pct> — has this window earned its `↻` yet?
+# Anything but digits would be evaluated as an arithmetic expression, so the
+# threshold is checked before it ever reaches (( )).
+shows_countdown() {
+  [[ $1 == none ]] && return 1
+  [[ $1 =~ ^[0-9]+$ ]] || return 0
+  (( $2 >= $1 ))
+}
+
+# gauge_form <id> — the form named for one gauge
+gauge_form() {
+  case $1 in
+    ctx)   printf '%s' "$GAUGE_CTX" ;;
+    5h)    printf '%s' "$GAUGE_5H" ;;
+    7d)    printf '%s' "$GAUGE_7D" ;;
+    fable) printf '%s' "$GAUGE_FABLE" ;;
+  esac
+}
+
+# meter <id> <used_pct> <time_pct> [color_fn] — the gauge for one segment, in
+# the form GAUGE names, with the space that separates it from the label. `none`
+# prints nothing at all, not even that space, so a segment cut down to its
+# number carries no empty column.
+#
+# A <time_pct> of -1 means the window has no reset time to plot: there is no
+# blue half, so the meter is a single column and the bar a plain one.
+meter() {
+  local id=$1 pct=$2 elapsed=$3 color_fn=${4:-pct_color} form
+  form=$(gauge_form "$id")
+  [[ $form == none ]] && return
+  printf ' '
+  if [[ $form == meter ]]; then
+    if (( elapsed >= 0 )); then
+      vert_meter "$pct" "$elapsed"
+    else
+      printf '\033[%s;%sm%s\033[0m' "$($color_fn "$pct")" "$TRACK" "$(vglyph "$pct")"
+    fi
+  elif (( elapsed >= 0 )); then
+    stacked_bar "$pct" "$elapsed" 10
+  else
+    bar "$pct" 10 "$color_fn"
+  fi
+}
+
+# elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
+elapsed_pct() {
+  local remaining=$(( $1 - $(date +%s) ))
+  echo $(( ( $2 - remaining ) * 100 / $2 ))
 }
 
 # fmt_tokens <count> — context tokens, always in thousands: 1k … 999k. A live
@@ -453,70 +568,44 @@ eff=$(effort_label "$effort")
 row2+=("$seg")
 
 if (( ctx_pct >= 0 )); then
-  seg="${DIM}Ctx${RESET} $(bar "$ctx_pct" 10 ctx_color)"
+  seg="${DIM}Ctx${RESET}$(meter ctx "$ctx_pct" -1 ctx_color)"
   seg+=" \033[$(ctx_color "$ctx_pct")m${ctx_pct}%${RESET}"
   (( ctx_tokens > 0 )) && seg+=" ${DIM}$(fmt_tokens "$ctx_tokens")${RESET}"
   row2+=("$seg")
 fi
 
-
-# vglyph <pct> — one block glyph whose height is the percentage, in eighths.
-# ▁ is the floor so 0% still shows a base.
-vglyph() {
-  local pct=$1 g=("▁" "▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
-  (( pct < 0 )) && pct=0; (( pct > 100 )) && pct=100
-  printf '%s' "${g[$(( (pct * 8 + 50) / 100 ))]}"
-}
-
-# vert_meter <used_pct> <time_pct> — the stacked bar folded into two columns:
-# usage glyph (pace-colored, like stacked_bar) beside a blue time glyph, both
-# on the dark track.
-vert_meter() {
-  printf '\033[%s;%sm%s\033[38;2;80;130;220;%sm%s\033[0m' \
-    "$(pace_color "$1" "$2")" "$TRACK" "$(vglyph "$1")" "$TRACK" "$(vglyph "$2")"
-}
-# elapsed_pct <resets_at_epoch> <window_seconds> — how far into the window we are
-elapsed_pct() {
-  local remaining=$(( $1 - $(date +%s) ))
-  echo $(( ( $2 - remaining ) * 100 / $2 ))
-}
-
 if (( five_pct >= 0 )); then
-  seg="${DIM}5h${RESET} "
-  if (( five_reset > 0 )); then
-    seg+="$(stacked_bar "$five_pct" "$(elapsed_pct "$five_reset" 18000)" 10)"
-  else
-    seg+="$(bar "$five_pct" 10)"
-  fi
+  five_el=-1
+  (( five_reset > 0 )) && five_el=$(elapsed_pct "$five_reset" 18000)
+  seg="${DIM}5h${RESET}$(meter 5h "$five_pct" "$five_el")"
   seg+=" \033[$(pct_color "$five_pct")m${five_pct}%${RESET}"
-  (( five_reset > 0 )) && seg+=" ${DIM}↻$(fmt_reset "$five_reset")${RESET}"
+  if (( five_reset > 0 )) && shows_countdown "$COUNTDOWN_5H" "$five_pct"; then
+    seg+=" ${DIM}↻$(fmt_reset "$five_reset")${RESET}"
+  fi
   row2+=("$seg")
 fi
 
 if (( week_pct >= 0 )); then
-  seg="${DIM}7d${RESET} "
-  if (( week_reset > 0 )); then
-    seg+="$(stacked_bar "$week_pct" "$(elapsed_pct "$week_reset" 604800)" 10)"
-  else
-    seg+="$(bar "$week_pct" 10)"
-  fi
+  week_el=-1
+  (( week_reset > 0 )) && week_el=$(elapsed_pct "$week_reset" 604800)
+  seg="${DIM}7d${RESET}$(meter 7d "$week_pct" "$week_el")"
   seg+=" \033[$(pct_color "$week_pct")m${week_pct}%${RESET}"
-  (( week_reset > 0 )) && seg+=" ${DIM}↻$(fmt_reset "$week_reset")${RESET}"
+  if (( week_reset > 0 )) && shows_countdown "$COUNTDOWN_7D" "$week_pct"; then
+    seg+=" ${DIM}↻$(fmt_reset "$week_reset")${RESET}"
+  fi
   row2+=("$seg")
 fi
 
 if (( fable_pct >= 0 )); then
-  seg="${DIM}Fable${RESET} "
-  # Two-column vertical meter instead of a 10-cell bar: the Fable window is
-  # secondary, so it gets a compact glance — heights for usage and time.
-  if (( fable_reset > 0 )); then
-    seg+="$(vert_meter "$fable_pct" "$(elapsed_pct "$fable_reset" 604800)")"
-  else
-    seg+="$(printf '\033[%s;%sm%s\033[0m' "$(pct_color "$fable_pct")" "$TRACK" "$(vglyph "$fable_pct")")"
-  fi
-  # No ↻ countdown here: the Fable window resets with the 7-day one, so the
-  # segment before it already shows this exact time.
+  fable_el=-1
+  (( fable_reset > 0 )) && fable_el=$(elapsed_pct "$fable_reset" 604800)
+  seg="${DIM}Fable${RESET}$(meter fable "$fable_pct" "$fable_el")"
   seg+=" \033[$(pct_color "$fable_pct")m${fable_pct}%${RESET}"
+  # Off by default — see COUNTDOWN_FABLE. The payload leaves resets_at null
+  # while the window is inactive, and that arrives here as 0.
+  if (( fable_reset > 0 )) && shows_countdown "$COUNTDOWN_FABLE" "$fable_pct"; then
+    seg+=" ${DIM}↻$(fmt_reset "$fable_reset")${RESET}"
+  fi
   row2+=("$seg")
 fi
 
