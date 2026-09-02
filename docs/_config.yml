@@ -1,0 +1,13 @@
+# What the page needs from Jekyll, and nothing else.
+#
+# jekyll-github-metadata is where site.github.* comes from — the repository this
+# site is built from, which index.html reads instead of naming one. GitHub Pages
+# loads the plugin whether or not it is listed here; listing it is what lets a
+# build anywhere else render the same page.
+plugins:
+  - jekyll-github-metadata
+
+# GitHub Pages otherwise defaults to jekyll-theme-primer, which would drop a
+# 136 KB stylesheet into assets/ beside the page's own media. The page carries
+# its own CSS and asks for no layout, so there is nothing for a theme to do.
+theme: null

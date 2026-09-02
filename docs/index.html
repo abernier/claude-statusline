@@ -1,3 +1,39 @@
+---
+# The front matter is the whole point: it asks Jekyll to render this page, so the
+# repository the site is built from — never a name written down here — is what the
+# links and the install commands point at. GitHub Pages turns jekyll-github-metadata
+# on by itself, and that plugin is where site.github.* comes from.
+---
+{%- comment -%}
+  `canonical` is the one repository named literally, and only so the page can tell
+  whether it is being built from it. A fork's install.sh still carries upstream's
+  built-in default, so every command a fork serves has to say --repo. --ref never
+  appears: the installer asks the repository for its own default branch.
+{%- endcomment -%}
+{%- assign canonical = "alp82/claude-statusline" -%}
+{%- assign nwo = site.github.repository_nwo | default: canonical -%}
+{%- comment -%}
+  Both of these could come from site.github, and both are left to arithmetic on
+  the repository name instead, because those two fields are the only ones the
+  plugin cannot answer without calling the Pages API — which is 404 to an
+  anonymous caller, and degrades to a *wrong* value rather than an empty one.
+  A builder other than GitHub Pages would then publish install commands that
+  silently point somewhere else. `pages` is the project-page URL every owner
+  gets, and `HEAD` is raw.githubusercontent's own name for whatever the
+  repository calls its default branch — truer than naming a branch anyway,
+  since the page cannot know a fork keeps its work on `main`.
+{%- endcomment -%}
+{%- assign owner = nwo | split: "/" | first -%}
+{%- assign name = nwo | split: "/" | last -%}
+{%- assign pages = "https://" | append: owner | append: ".github.io/" | append: name -%}
+{%- assign ref = "HEAD" -%}
+{%- if nwo == canonical -%}
+{%- assign cmd_install = "bash" -%}
+{%- assign cmd_uninstall = "bash -s -- --uninstall" -%}
+{%- else -%}
+{%- assign cmd_install = "bash -s -- --repo " | append: nwo -%}
+{%- assign cmd_uninstall = "bash -s -- --uninstall --repo " | append: nwo -%}
+{%- endif -%}
 <!doctype html>
 <!--
   claude-statusline — the landing page. Ticket #7 of wayfinder map #1.
@@ -24,15 +60,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-statusline — a statusline for Claude Code</title>
 <meta name="description" content="A single-file bash statusline for Claude Code. Shows your folder, branch, model and effort, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
-<link rel="canonical" href="https://alp82.github.io/claude-statusline/">
+<link rel="canonical" href="{{ pages }}/">
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://alp82.github.io/claude-statusline/">
+<meta property="og:url" content="{{ pages }}/">
 <meta property="og:title" content="claude-statusline — a statusline for Claude Code">
 <meta property="og:description" content="One bash script. Folder, branch, model and effort, context usage, and your 5-hour, 7-day and Fable limits as bars under the prompt.">
-<meta property="og:image" content="https://alp82.github.io/claude-statusline/assets/social-preview.png">
+<meta property="og:image" content="{{ pages }}/assets/social-preview.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta name="twitter:card" content="summary_large_image">
@@ -435,9 +471,9 @@ noscript img { display:block; width:100%; height:auto; }
 
   <aside class="side">
     <div class="brand"><b>claude</b>-statusline</div>
-    <div class="ver">one bash file · MIT</div>
+    <div class="ver">one bash file · MIT{% if nwo != canonical %}<br>a fork of <a href="https://github.com/{{ canonical }}">{{ canonical }}</a>{% endif %}</div>
     <div class="social">
-      <a href="https://github.com/alp82/claude-statusline" target="_blank" rel="noopener" title="claude-statusline on GitHub">
+      <a href="https://github.com/{{ nwo }}" target="_blank" rel="noopener" title="{{ name }} on GitHub">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
         <span>GitHub</span>
       </a>
@@ -490,10 +526,10 @@ noscript img { display:block; width:100%; height:auto; }
           <div class="ib paste" data-copy-surface>
             <div class="ib-head">
               <span class="ib-lbl">The prompt for Claude Code</span>
-              <button class="btn" data-copy="Install or update the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
+              <button class="btn" data-copy="Install or update the statusline from https://github.com/{{ nwo }} for me.&#10;Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy the prompt</button>
             </div>
-            <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/alp82/claude-statusline for me.
-  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+            <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/{{ nwo }} for me.
+  Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
   points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
   ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
@@ -502,7 +538,7 @@ noscript img { display:block; width:100%; height:auto; }
             <span>Paste it into Claude Code and press return. The same prompt installs it,
               and updates it later.</span>
             <a href="#install">Install it by hand</a>
-            <a href="https://github.com/alp82/claude-statusline">GitHub ↗</a>
+            <a href="https://github.com/{{ nwo }}">GitHub ↗</a>
           </div>
         </header>
 
@@ -623,10 +659,10 @@ noscript img { display:block; width:100%; height:auto; }
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
-                <button class="btn" data-copy="Install or update the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="Install or update the statusline from https://github.com/{{ nwo }} for me.&#10;Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}&#10;Then check that bash, jq and curl are present, confirm ~/.claude/settings.json&#10;points statusLine at ~/.claude/statusline.sh and subagentStatusLine at&#10;~/.claude/subagent-statusline.sh, and tell me what to do next."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/alp82/claude-statusline for me.
-  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash
+              <pre><span class="p">&gt;</span> Install or update the statusline from https://github.com/{{ nwo }} for me.
+  Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}
   Then check that bash, jq and curl are present, confirm ~/.claude/settings.json
   points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
   ~/.claude/subagent-statusline.sh, and tell me what to do next.</pre>
@@ -637,9 +673,9 @@ noscript img { display:block; width:100%; height:auto; }
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>02</b>Or run the installer yourself</span>
-                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash</pre>
+              <pre>$ curl -fsSL {{ pages }}/install.sh | {{ cmd_install }}</pre>
               <div class="note">The same script without the agent, and the same either way: it
                 puts <code>statusline.sh</code> and <code>subagent-statusline.sh</code> into
                 <code>~/.claude/</code> and points <code>settings.json</code> at them, with a backup
@@ -650,11 +686,11 @@ noscript img { display:block; width:100%; height:auto; }
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>03</b>Or install it by hand</span>
-                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh -o ~/.claude/statusline.sh&#10;curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh -o ~/.claude/subagent-statusline.sh&#10;chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="curl -fsSL https://raw.githubusercontent.com/{{ nwo }}/{{ ref }}/statusline.sh -o ~/.claude/statusline.sh&#10;curl -fsSL https://raw.githubusercontent.com/{{ nwo }}/{{ ref }}/subagent-statusline.sh -o ~/.claude/subagent-statusline.sh&#10;chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre>$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/statusline.sh \
+              <pre>$ curl -fsSL https://raw.githubusercontent.com/{{ nwo }}/{{ ref }}/statusline.sh \
     -o ~/.claude/statusline.sh
-$ curl -fsSL https://raw.githubusercontent.com/alp82/claude-statusline/main/subagent-statusline.sh \
+$ curl -fsSL https://raw.githubusercontent.com/{{ nwo }}/{{ ref }}/subagent-statusline.sh \
     -o ~/.claude/subagent-statusline.sh
 $ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
               <div class="note">Two files, nothing else. Then add the settings below yourself.</div>
@@ -688,10 +724,10 @@ $ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>01</b>Paste this into Claude Code</span>
-                <button class="btn" data-copy="Uninstall the statusline from https://github.com/alp82/claude-statusline for me.&#10;Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall&#10;Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,&#10;confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,&#10;and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="Uninstall the statusline from https://github.com/{{ nwo }} for me.&#10;Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_uninstall }}&#10;Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,&#10;confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,&#10;and show me which .bak files it left behind."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre><span class="p">&gt;</span> Uninstall the statusline from https://github.com/alp82/claude-statusline for me.
-  Run: curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall
+              <pre><span class="p">&gt;</span> Uninstall the statusline from https://github.com/{{ nwo }} for me.
+  Run: curl -fsSL {{ pages }}/install.sh | {{ cmd_uninstall }}
   Then confirm ~/.claude/statusline.sh and ~/.claude/subagent-statusline.sh are gone,
   confirm ~/.claude/settings.json has no statusLine or subagentStatusLine entry,
   and show me which .bak files it left behind.</pre>
@@ -701,9 +737,9 @@ $ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
             <div class="ib">
               <div class="ib-head">
                 <span class="ib-lbl"><b>02</b>Or run it yourself</span>
-                <button class="btn" data-copy="curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
+                <button class="btn" data-copy="curl -fsSL {{ pages }}/install.sh | {{ cmd_uninstall }}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h7a1 1 0 0 1 1 1v1h-1V3H4v8h1v1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/><path d="M7 5h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 1v7h6V6H7Z"/></svg>copy</button>
               </div>
-              <pre>$ curl -fsSL https://alp82.github.io/claude-statusline/install.sh | bash -s -- --uninstall</pre>
+              <pre>$ curl -fsSL {{ pages }}/install.sh | {{ cmd_uninstall }}</pre>
               <div class="note">Removes both scripts from <code>~/.claude/</code>, the
                 <code>statusLine</code> and <code>subagentStatusLine</code> entries in
                 <code>settings.json</code>, and the cached usage numbers. It backs up the scripts
@@ -719,9 +755,10 @@ $ chmod +x ~/.claude/statusline.sh ~/.claude/subagent-statusline.sh</pre>
           </div><!-- /p-rm -->
           <div class="foot">
             <span>MIT</span>
-            <a href="https://github.com/alp82/claude-statusline">alp82/claude-statusline</a>
+            <a href="https://github.com/{{ nwo }}">{{ nwo }}</a>
             <a href="https://x.com/alperortac" rel="noopener me">@alperortac</a>
-          </div>
+{% if nwo != canonical %}            <span>a fork of <a href="https://github.com/{{ canonical }}">{{ canonical }}</a></span>
+{% endif %}          </div>
         </section>
 
       </div>
