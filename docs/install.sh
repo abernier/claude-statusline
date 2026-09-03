@@ -16,6 +16,8 @@ set -euo pipefail
 
 REPO="alp82/claude-statusline"
 REF="${CLAUDE_STATUSLINE_REF:-main}"
+REF_GIVEN=0
+FROM=''
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 PATCH_SETTINGS=1
 UNINSTALL=0
@@ -53,6 +55,9 @@ Installs the statusline, or updates it in place if you already have it.
 Options:
   --dir <path>     Claude Code config dir (default: \$CLAUDE_CONFIG_DIR or ~/.claude)
   --ref <ref>      branch or tag to install from (default: $REF)
+  --from <dir>     install the two scripts from a local directory instead of
+                   downloading them; nothing is fetched. This is how the Claude
+                   Code plugin installs its own copy.
   --no-settings    install the scripts only; print the settings.json snippet
                    instead of writing it. With --uninstall, remove the scripts
                    but leave settings.json alone.
@@ -66,7 +71,8 @@ EOF
 while [[ $# -gt 0 ]]; do
   case $1 in
     --dir)          CONFIG_DIR=${2:?--dir needs a path}; shift 2 ;;
-    --ref)          REF=${2:?--ref needs a ref}; shift 2 ;;
+    --ref)          REF=${2:?--ref needs a ref}; REF_GIVEN=1; shift 2 ;;
+    --from)         FROM=${2:?--from needs a path}; shift 2 ;;
     --no-settings)  PATCH_SETTINGS=0; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -78,6 +84,13 @@ done
 # relative path would resolve nowhere and the statusline would silently never
 # render. Anchor it here, while $PWD still means what the user typed it against.
 [[ $CONFIG_DIR == /* ]] || CONFIG_DIR="$PWD/${CONFIG_DIR#./}"
+
+# --from names a directory on this machine; --ref names a place to download
+# from. Together they would silently disagree about which one won.
+if [[ -n $FROM ]]; then
+  (( ! REF_GIVEN )) || die "--from and --ref are mutually exclusive."
+  [[ -d $FROM ]] || die "--from: no such directory: $FROM"
+fi
 
 # REF is interpolated into a URL, and curl removes dot-segments before the
 # request — so `--ref ../../someone-else/repo/main` would quietly escape the
@@ -101,7 +114,7 @@ fi
 # the script itself, not just of this installer. Uninstalling fetches nothing,
 # so curl is an install-only need.
 deps=(jq)
-(( UNINSTALL )) || deps+=(curl)
+(( UNINSTALL )) || [[ -n $FROM ]] || deps+=(curl)
 for dep in "${deps[@]}"; do
   command -v "$dep" >/dev/null 2>&1 \
     || die "$dep is required (statusline.sh needs it too) — install it and re-run."
@@ -268,21 +281,44 @@ if (( UNINSTALL )); then
 fi
 
 # --- fetch ------------------------------------------------------------------
+# Where a script came from changes nothing about what it has to be: a non-empty
+# file whose first line is the shebang. A truncated download and a --from
+# directory that holds something else fail the same way, before anything is
+# installed.
+verify() {
+  local file=$1 origin=$2
+  [[ -s $file ]] || die "$origin is empty"
+  head -n 1 "$file" | grep -q '^#!/usr/bin/env bash$' \
+    || die "$origin did not look like a statusline script"
+}
+
 fetch() {
   local url=$1 dest=$2
   curl -fsSL --connect-timeout 10 --max-time 120 "$url" -o "$dest" \
     || die "download failed: $url"
-  [[ -s $dest ]] || die "downloaded an empty file from $url"
-  head -n 1 "$dest" | grep -q '^#!/usr/bin/env bash$' \
-    || die "$url did not look like a statusline script"
+  verify "$dest" "$url"
+}
+
+copy_in() {
+  local src=$1 dest=$2
+  [[ -f $src ]] || die "no such file: $src"
+  verify "$src" "$src"
+  cp "$src" "$dest"
 }
 
 tmp=$(mktemp)
 sub_tmp=$(mktemp)
-step "fetching statusline.sh @ $REF"
-fetch "$SOURCE_URL" "$tmp"
-step "fetching subagent-statusline.sh @ $REF"
-fetch "$SUB_SOURCE_URL" "$sub_tmp"
+if [[ -n $FROM ]]; then
+  step "taking statusline.sh from $FROM"
+  copy_in "$FROM/statusline.sh" "$tmp"
+  step "taking subagent-statusline.sh from $FROM"
+  copy_in "$FROM/subagent-statusline.sh" "$sub_tmp"
+else
+  step "fetching statusline.sh @ $REF"
+  fetch "$SOURCE_URL" "$tmp"
+  step "fetching subagent-statusline.sh @ $REF"
+  fetch "$SUB_SOURCE_URL" "$sub_tmp"
+fi
 
 # --- install ----------------------------------------------------------------
 # 0700: the config dir holds settings.json, which routinely carries API keys.
