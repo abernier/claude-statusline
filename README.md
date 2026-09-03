@@ -45,6 +45,42 @@ points statusLine at ~/.claude/statusline.sh and subagentStatusLine at
 Claude reads the installer before it runs it and tells you what changed.
 
 <details>
+<summary>Or install it as a Claude Code plugin</summary>
+
+<br>
+
+The repository is also a plugin marketplace, so Claude Code can carry the
+statusline the way it carries anything else — and update it on its own:
+
+```text
+/plugin marketplace add alp82/claude-statusline
+/plugin install claude-statusline@claude-statusline
+```
+
+There is no third command. The plugin runs the same `install.sh` at session
+start, from the copy it already has on disk, so the two scripts land in
+`~/.claude/` and `settings.json` gets wired exactly as above — nothing is
+downloaded, and the installer's output is swallowed unless something goes
+wrong. A plugin cannot do this by declaring it: Claude Code reads `statusLine`
+from a settings file only.
+
+Updating is then Claude Code's business, not yours. Turn auto-update on for
+this marketplace in `/plugin` — it is off by default for marketplaces that are
+not Anthropic's — and every push to `main` arrives by itself. `/plugin update
+claude-statusline` pulls one on demand.
+
+To remove it, run `/claude-statusline:remove` **before** `/plugin uninstall
+claude-statusline`: uninstalling takes the plugin's copy away, but a plugin
+cannot reach into `settings.json` on its way out, and the entry left behind
+would keep rendering a script nothing updates any more.
+
+`/claude-statusline:setup` re-runs the wiring by hand — the plugin stands down
+on its own when `settings.json` already points `statusLine` at something else,
+rather than taking another statusline over unasked.
+
+</details>
+
+<details>
 <summary>Or run the installer yourself</summary>
 
 <br>
@@ -128,6 +164,9 @@ It removes both scripts from `~/.claude/`, the `statusLine` and
 `~/.claude/cache/`. It backs up the scripts and `settings.json` as `.bak`
 first. It changes nothing else, and it leaves an entry alone if it points at
 another statusline. `--no-settings` removes the scripts only.
+
+If you installed the plugin, run `/claude-statusline:remove` and then `/plugin
+uninstall claude-statusline` instead — same script, same backups.
 
 </details>
 

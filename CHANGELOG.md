@@ -4,6 +4,46 @@ Notable changes, newest first. Dates instead of versions: the install one-liner
 always serves `main`, so a date names a state of `main` better than a version
 number would.
 
+## 2026-09-03
+
+### Added
+
+- **The repository is a Claude Code plugin marketplace, so Claude Code can
+  install the statusline and keep it updated by itself.**
+  `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` make the
+  repository serve itself as a single plugin: `/plugin marketplace add
+  alp82/claude-statusline` then `/plugin install
+  claude-statusline@claude-statusline`, and updates arrive with the
+  marketplace's, on a switch in `/plugin` rather than a one-liner pasted again.
+  No runtime changes: the plugin ships no second implementation of anything. A
+  `SessionStart` hook (`hooks/hooks.json`, `hooks/session-start.sh`) runs
+  `docs/install.sh` from the plugin's own directory, so the same two scripts
+  land in the same config dir and `settings.json` is wired by the same code
+  that the curl one-liner runs. The hook has to exist because a plugin cannot
+  declare `statusLine` — Claude Code reads that key from a settings file only,
+  and a plugin's own `settings.json` is honoured for `agent` and
+  `subagentStatusLine` alone. It has to run on every session because an
+  installed plugin lives under a path named for its version, so the copy it
+  hands the installer moves with each update. It writes nothing in the common
+  case: two `cmp` calls against the installed scripts, and it returns. It says
+  nothing either — a `SessionStart` hook's stdout is injected into the session
+  as context, so the installer's output is captured and only reaches stderr
+  when it fails. And it stands down, with a message, when `settings.json`
+  already points `statusLine` at another command: taking a statusline over is
+  the right answer for a command someone typed and the wrong one for a hook
+  that runs on its own. `/claude-statusline:setup` is that command.
+  `/claude-statusline:remove` unwires before `/plugin uninstall`, which cannot
+  reach into `settings.json` on its way out. `plugin.json` deliberately carries
+  no `version`: Claude Code then resolves the version to the source commit,
+  which is what makes every push to `main` an update — the same promise the
+  one-liner makes by always serving `main`.
+- **`install.sh --from <dir>` installs the two scripts from a directory instead
+  of downloading them.** Nothing is fetched, `curl` stops being a dependency,
+  and a checkout or a plugin's own copy can be installed as-is. It refuses to
+  be combined with `--ref`, which names somewhere to download from. The
+  shebang-and-non-empty check that guarded a download now guards both, in
+  `verify()`.
+
 ## 2026-09-02
 
 ### Added

@@ -16,6 +16,8 @@ The docked line's working-tree state (`DEFAULTS` in `docs/index.html`) and the `
 
 The annotation over a bar — the racers named, the gap read out, the effort row — is drawn twice: by `annotate()` in `docs/index.html` and by `remotion/src/statusline/Annotation.tsx`. The page measures the painted bar, the render computes it from `theme.ts`, and both carry the same pixel constants. Change one, change the other.
 
+`.claude-plugin/`, `hooks/` and `commands/` make the repository a Claude Code plugin marketplace holding one plugin — itself. The plugin adds no second implementation: its `SessionStart` hook runs `docs/install.sh --from "$CLAUDE_PLUGIN_ROOT"`, so the scripts and the settings wiring come from the same code the curl one-liner runs. Two things in `hooks/session-start.sh` are copies and have to stay in step with the installer: the shape of the command it writes (`$CONFIG_DIR/statusline.sh`, quoted when it needs it) and `is_ours` — the hook decides on its own whether a `statusLine` already in `settings.json` is ours, because it must stand down where the installer takes over. Change one, change the other. `plugin.json` carries no `version` on purpose: Claude Code falls back to the source commit, so every push to the default branch is an update, and adding a version would freeze that until it is bumped.
+
 ## Update guide
 
 For every day where changes are made, update CHANGELOG.md.

@@ -1,0 +1,14 @@
+{
+  "name": "claude-statusline",
+  "description": "The claude-statusline plugin, served from the repository that holds the scripts.",
+  "owner": {
+    "name": "alp82",
+    "url": "https://github.com/alp82"
+  },
+  "plugins": [
+    {
+      "name": "claude-statusline",
+      "source": "./"
+    }
+  ]
+}

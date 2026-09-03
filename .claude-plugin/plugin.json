@@ -1,0 +1,12 @@
+{
+  "name": "claude-statusline",
+  "description": "The claude-statusline line and agent panel, installed and kept up to date by Claude Code itself.",
+  "author": {
+    "name": "alp82",
+    "url": "https://github.com/alp82"
+  },
+  "homepage": "https://alp82.github.io/claude-statusline/",
+  "repository": "https://github.com/alp82/claude-statusline",
+  "license": "MIT",
+  "keywords": ["statusline", "usage", "limits", "context", "git"]
+}
